@@ -39,6 +39,7 @@ const setupGlobalListener = () => {
   if (globalListenerSetup) return
   globalListenerSetup = true
 
+  // PTY output for regular terminals
   window.electronAPI.pty.onOutput((id, data) => {
     const prev = previewCache.get(id) || ''
     const combined = prev + data
@@ -46,6 +47,26 @@ const setupGlobalListener = () => {
     const cleaned = stripAnsi(combined)
     const lines = cleaned.split('\n').slice(-8)
     previewCache.set(id, lines.join('\n'))
+  })
+
+  // Claude agent messages for agent terminal previews
+  window.electronAPI.claude.onMessage((sessionId, message) => {
+    const msg = message as { role?: string; content?: string }
+    if (msg.role === 'assistant' && msg.content) {
+      const lines = msg.content.split('\n').slice(-8)
+      previewCache.set(sessionId, lines.join('\n'))
+    }
+  })
+
+  // Claude agent streaming text for live preview
+  window.electronAPI.claude.onStream((sessionId, data) => {
+    const stream = data as { text?: string }
+    if (stream.text) {
+      const prev = previewCache.get(sessionId) || ''
+      const combined = prev + stream.text
+      const lines = combined.split('\n').slice(-8)
+      previewCache.set(sessionId, lines.join('\n'))
+    }
   })
 }
 
@@ -97,7 +118,7 @@ export function TerminalThumbnail({ terminal, isActive, onClick }: TerminalThumb
         <ActivityIndicator terminalId={terminal.id} size="small" />
       </div>
       <div className="thumbnail-preview" style={{ fontFamily }}>
-        {preview || '$ _'}
+        {preview || (isAgent ? '' : '$ _')}
       </div>
     </div>
   )

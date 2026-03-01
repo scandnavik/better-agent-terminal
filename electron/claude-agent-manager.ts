@@ -1034,7 +1034,7 @@ export class ClaudeAgentManager {
 
     // Store the SDK session ID so startSession will use it for resume
     sdkSessionIds.set(sessionId, sdkSessionIdToResume)
-    const result = await this.startSession(sessionId, { cwd })
+    const result = await this.startSession(sessionId, { cwd, sdkSessionId: sdkSessionIdToResume })
 
     // Load and replay historical messages from the JSONL file
     if (result) {
