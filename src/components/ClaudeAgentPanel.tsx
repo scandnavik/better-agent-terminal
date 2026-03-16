@@ -395,9 +395,9 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
         const rd = resultData as { result?: string; subtype?: string } | undefined
         if (rd?.result && rd.subtype === 'success') {
           setMessages(prev => {
-            // Skip if the last message is already an assistant message (normal conversation)
-            const last = prev[prev.length - 1]
-            if (last && 'role' in last && last.role === 'assistant') return prev
+            // Skip if any assistant message already has this content (avoid duplicates)
+            const alreadyShown = prev.some(m => 'role' in m && m.role === 'assistant' && m.content === rd.result)
+            if (alreadyShown) return prev
             return [...prev, {
               id: `result-${Date.now()}`,
               sessionId,
