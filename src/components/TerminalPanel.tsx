@@ -272,10 +272,27 @@ export const TerminalPanel = memo(function TerminalPanel({ terminalId, isActive 
       }
     })
 
+    // Track IME composition state on xterm's hidden textarea
+    // to prevent CAPS LOCK and other keys from committing partial IME input
+    let imeComposing = false
+    const xtermTextarea = containerRef.current?.querySelector('.xterm-helper-textarea')
+    if (xtermTextarea) {
+      xtermTextarea.addEventListener('compositionstart', () => { imeComposing = true })
+      xtermTextarea.addEventListener('compositionend', () => { imeComposing = false })
+    }
+
     // Handle copy and paste shortcuts
     terminal.attachCustomKeyEventHandler((event) => {
       // Only handle keydown events to prevent duplicate actions
       if (event.type !== 'keydown') return true
+
+      // During IME composition, block non-composition key events
+      // to prevent CAPS LOCK etc. from committing partial input
+      if (imeComposing || event.isComposing) {
+        // keyCode 229 = IME composition event, let it through
+        // Everything else (CAPS LOCK, modifiers, etc.) should be blocked
+        return event.keyCode === 229
+      }
 
       // Shift+Enter for newline (multiline input)
       if (event.shiftKey && event.key === 'Enter') {
