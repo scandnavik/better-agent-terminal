@@ -416,10 +416,6 @@ export class ClaudeAgentManager {
         // Check abort
         if (session.abortController.signal.aborted) break
 
-        // Temporary: log all message types to debug /context and ctx tracking
-        const msgPreview = JSON.stringify(message).slice(0, 300)
-        fsSync.appendFileSync('/tmp/bat-ctx.log', `${new Date().toISOString()} [msg] type=${(message as Record<string,unknown>).type} subtype=${(message as Record<string,unknown>).subtype || ''} ${msgPreview}\n`)
-
         if (message.type === 'system' && message.subtype === 'init') {
           // Capture and persist the SDK session ID
           const initMsg = message as { session_id: string; model?: string; cwd?: string; permissionMode?: string }
@@ -606,7 +602,6 @@ export class ClaudeAgentManager {
             for (const [model, modelStats] of Object.entries(resultMsg.modelUsage)) {
               const line = `[Claude ctx] modelUsage[${model}]: input=${modelStats.inputTokens}, output=${modelStats.outputTokens}, contextWindow=${modelStats.contextWindow}`
               console.log(line)
-              fsSync.appendFileSync('/tmp/bat-ctx.log', `${new Date().toISOString()} ${line}\n`)
               totalInput += modelStats.inputTokens || 0
               totalOutput += modelStats.outputTokens || 0
               if (modelStats.contextWindow) {
@@ -615,13 +610,11 @@ export class ClaudeAgentManager {
             }
             const summary = `[Claude ctx] prev: input=${session.metadata.inputTokens}, output=${session.metadata.outputTokens} | new: input=${totalInput}, output=${totalOutput} | cost=${resultMsg.total_cost_usd}`
             console.log(summary)
-            fsSync.appendFileSync('/tmp/bat-ctx.log', `${new Date().toISOString()} ${summary}\n`)
             session.metadata.inputTokens = totalInput
             session.metadata.outputTokens = totalOutput
           } else if (resultMsg.usage) {
             const line = `[Claude ctx] usage fallback: input=${resultMsg.usage.input_tokens}, output=${resultMsg.usage.output_tokens} | prev: input=${session.metadata.inputTokens}, output=${session.metadata.outputTokens}`
             console.log(line)
-            fsSync.appendFileSync('/tmp/bat-ctx.log', `${new Date().toISOString()} ${line}\n`)
             // Fallback: usage is session-cumulative (like total_cost_usd), assign directly
             session.metadata.inputTokens = resultMsg.usage.input_tokens || 0
             session.metadata.outputTokens = resultMsg.usage.output_tokens || 0
