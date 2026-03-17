@@ -2287,12 +2287,7 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
                     </span>
                   </div>
                   {s.customTitle && <div className="claude-resume-item-title">{s.customTitle}</div>}
-                  {(s.firstPrompt || s.preview) && (!s.customTitle || s.customTitle !== (s.firstPrompt || s.preview)) && (
-                    <div className="claude-resume-item-preview">{s.firstPrompt || s.preview}</div>
-                  )}
-                  {s.summary && s.summary !== s.customTitle && s.summary !== (s.firstPrompt || s.preview) && (
-                    <div className="claude-resume-item-summary">{s.summary}</div>
-                  )}
+                  {s.summary && s.summary !== s.customTitle && <div className="claude-resume-item-preview">{s.summary}</div>}
                 </div>
               ))}
             </div>
