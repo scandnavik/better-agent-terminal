@@ -755,14 +755,7 @@ export class ClaudeAgentManager {
 
   async setModel(sessionId: string, model: string): Promise<boolean> {
     const session = this.sessions.get(sessionId)
-    if (!session) return false
-
-    if (!model || model === 'default') {
-      // "default" is not a valid SDK model ID — just clear the override
-      session.model = undefined
-      session.metadata.model = undefined
-      return true
-    }
+    if (!session || !model) return false
 
     // Always persist the model on the session so the next runQuery picks it up
     session.model = model

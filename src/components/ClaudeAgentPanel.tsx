@@ -562,8 +562,7 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
       window.electronAPI.claude.getSupportedModels(sessionId).then((models: ModelInfo[]) => {
         console.log('[getSupportedModels] raw response:', JSON.stringify(models, null, 2))
         if (models && models.length > 0) {
-          // Filter out "default" — always show real model names
-          setAvailableModels(models.filter(m => m.value !== 'default'))
+          setAvailableModels(models)
         }
       }).catch(() => {})
       window.electronAPI.claude.getAccountInfo(sessionId).then(info => {
