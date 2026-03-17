@@ -33,6 +33,8 @@ export interface TerminalInstance {
   hasPendingAction?: boolean;
   sdkSessionId?: string;         // Claude SDK session ID for auto-resume
   model?: string;                // Selected Claude model for this session
+  pendingPrompt?: string;        // Prompt to auto-send after fork/resume
+  pendingImages?: string[];      // Data URLs of images to send with pendingPrompt
 }
 
 export interface AppState {

@@ -142,6 +142,10 @@ const electronAPI = {
       ipcRenderer.invoke('claude:list-sessions', cwd),
     resumeSession: (sessionId: string, sdkSessionId: string, cwd: string, model?: string) =>
       ipcRenderer.invoke('claude:resume-session', sessionId, sdkSessionId, cwd, model),
+    forkSession: (sessionId: string) =>
+      ipcRenderer.invoke('claude:fork-session', sessionId) as Promise<{ newSdkSessionId: string } | null>,
+    stopTask: (sessionId: string, taskId: string) =>
+      ipcRenderer.invoke('claude:stop-task', sessionId, taskId) as Promise<boolean>,
     restSession: (sessionId: string) =>
       ipcRenderer.invoke('claude:rest-session', sessionId) as Promise<boolean>,
     wakeSession: (sessionId: string) =>

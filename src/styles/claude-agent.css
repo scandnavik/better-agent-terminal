@@ -87,12 +87,31 @@
   text-overflow: ellipsis;
   opacity: 0.8;
 }
+.claude-active-task-progress {
+  font-size: calc(var(--claude-font-size) - 2px);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.claude-active-task-stalled {
+  font-size: calc(var(--claude-font-size) - 2px);
+  color: var(--warning-color, #e8a838);
+  font-weight: 600;
+}
+
 .claude-active-task-time {
   font-size: calc(var(--claude-font-size) - 2px);
   font-family: 'Cascadia Code', 'SF Mono', Consolas, monospace;
   color: var(--claude-accent);
   opacity: 0.8;
   margin-left: auto;
+}
+
+.claude-active-task-item .claude-task-stop-btn {
+  margin-left: 4px;
 }
 
 .claude-messages {
@@ -560,6 +579,56 @@
   animation: claude-blink 2s step-end infinite;
 }
 
+.claude-task-progress {
+  font-size: calc(var(--claude-font-size) - 1px);
+  color: var(--text-secondary);
+  margin: 2px 0 4px;
+  padding: 4px 8px;
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.claude-task-progress.stalled {
+  border-left: 2px solid var(--warning-color, #e8a838);
+}
+
+.claude-task-progress-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.claude-task-stall-warn {
+  font-size: calc(var(--claude-font-size) - 2px);
+  color: var(--warning-color, #e8a838);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.claude-task-actions {
+  margin: 2px 0 4px;
+}
+
+.claude-task-stop-btn {
+  font-size: calc(var(--claude-font-size) - 2px);
+  padding: 2px 10px;
+  border: 1px solid var(--danger-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--danger-color);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.claude-task-stop-btn:hover {
+  background: var(--danger-color);
+  color: #fff;
+}
+
 /* Deny reason */
 .claude-tool-reason {
   font-size: calc(var(--claude-font-size) - 1px);
@@ -955,10 +1024,11 @@
 .claude-input-controls {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
   font-family: 'Cascadia Code', 'SF Mono', Consolas, monospace;
   font-size: calc(var(--claude-font-size) - 2px);
   color: var(--text-secondary);
+  overflow: hidden;
 }
 
 .claude-input-actions {
@@ -972,6 +1042,23 @@
   font-size: calc(var(--claude-font-size) - 3px);
   color: var(--text-secondary);
   cursor: default;
+}
+
+.claude-fork-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 2px 10px;
+  font-size: calc(var(--claude-font-size) - 2px);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.claude-fork-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
 }
 
 .claude-send-btn {
@@ -1313,6 +1400,32 @@
   background: inherit;
 }
 
+.claude-ask-with-preview {
+  display: flex;
+  gap: 12px;
+}
+
+.claude-ask-with-preview .claude-ask-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.claude-ask-preview {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.claude-ask-preview iframe {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  border: none;
+}
+
 /* Image Attachments */
 .claude-attachments {
   display: flex;
@@ -1443,9 +1556,38 @@
   color: var(--text-secondary);
 }
 
+.claude-resume-item-branch {
+  font-family: 'Cascadia Code', 'SF Mono', Consolas, monospace;
+  font-size: calc(var(--claude-font-size) - 2px);
+  color: var(--text-secondary);
+  background: var(--bg-tertiary, var(--bg-hover));
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.claude-resume-item-title {
+  font-size: var(--claude-font-size);
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .claude-resume-item-preview {
   font-size: calc(var(--claude-font-size) - 1px);
   color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.claude-resume-item-summary {
+  font-size: calc(var(--claude-font-size) - 2px);
+  color: var(--text-secondary);
+  opacity: 0.7;
+  margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1469,15 +1611,15 @@
 .claude-statusline {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 2px 12px;
+  gap: 10px;
+  padding: 3px 12px;
   font-size: calc(var(--claude-font-size) - 2px);
   color: var(--text-secondary);
-  min-height: 20px;
+  min-height: 22px;
 }
 
-.claude-statusline + .claude-statusline {
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+.claude-statusline-sep {
+  opacity: 0.3;
 }
 
 .claude-statusline-item {

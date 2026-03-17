@@ -170,6 +170,16 @@ class WorkspaceStore {
     this.save()
   }
 
+  setTerminalPendingPrompt(terminalId: string, prompt: string, images?: string[]): void {
+    this.state = {
+      ...this.state,
+      terminals: this.state.terminals.map(t =>
+        t.id === terminalId ? { ...t, pendingPrompt: prompt, pendingImages: images } : t
+      )
+    }
+    this.notify()
+  }
+
   // Legacy: also store on workspace for backwards compatibility
   setLastSdkSessionId(workspaceId: string, sdkSessionId: string): void {
     this.state = {

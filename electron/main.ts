@@ -418,6 +418,8 @@ function registerProxiedHandlers() {
   registerHandler('claude:resolve-ask-user', (sessionId: string, toolUseId: string, answers: Record<string, string>) => claudeManager?.resolveAskUser(sessionId, toolUseId, answers))
   registerHandler('claude:list-sessions', (cwd: string) => claudeManager?.listSessions(cwd))
   registerHandler('claude:resume-session', (sessionId: string, sdkSessionId: string, cwd: string, model?: string) => claudeManager?.resumeSession(sessionId, sdkSessionId, cwd, model))
+  registerHandler('claude:fork-session', (sessionId: string) => claudeManager?.forkSession(sessionId))
+  registerHandler('claude:stop-task', (sessionId: string, taskId: string) => claudeManager?.stopTask(sessionId, taskId))
   registerHandler('claude:rest-session', (sessionId: string) => claudeManager?.restSession(sessionId))
   registerHandler('claude:wake-session', (sessionId: string) => claudeManager?.wakeSession(sessionId))
   registerHandler('claude:is-resting', (sessionId: string) => claudeManager?.isResting(sessionId) ?? false)
