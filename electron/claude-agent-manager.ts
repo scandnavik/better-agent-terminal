@@ -169,7 +169,7 @@ export class ClaudeAgentManager {
     this.send('claude:tool-result', sessionId, { id: toolId, ...updates })
   }
 
-  async startSession(sessionId: string, options: { cwd: string; prompt?: string; sdkSessionId?: string; permissionMode?: AppPermissionMode }): Promise<boolean> {
+  async startSession(sessionId: string, options: { cwd: string; prompt?: string; sdkSessionId?: string; permissionMode?: AppPermissionMode; model?: string }): Promise<boolean> {
     // Prevent duplicate session creation
     if (this.sessions.has(sessionId)) {
       return true
@@ -208,6 +208,7 @@ export class ClaudeAgentManager {
         permissionMode: options.permissionMode || 'default',
         effort: 'high',
         enable1MContext: false,
+        model: options.model,
         messageQueue: [],
       })
 
@@ -753,6 +754,15 @@ export class ClaudeAgentManager {
   }
 
   async setModel(sessionId: string, model: string): Promise<boolean> {
+    if (!model || model === 'default') {
+      // "default" is not a valid SDK model ID — just clear the override
+      const session = this.sessions.get(sessionId)
+      if (session) {
+        session.model = undefined
+        session.metadata.model = undefined
+      }
+      return true
+    }
     const session = this.sessions.get(sessionId)
     if (!session?.queryInstance) {
       console.warn(`[setModel] no queryInstance for session ${sessionId.slice(0, 8)}`)
@@ -1091,7 +1101,7 @@ export class ClaudeAgentManager {
     this.send('claude:history', sessionId, items)
   }
 
-  async resumeSession(sessionId: string, sdkSessionIdToResume: string, cwd: string): Promise<boolean> {
+  async resumeSession(sessionId: string, sdkSessionIdToResume: string, cwd: string, model?: string): Promise<boolean> {
     // Stop current session if running
     const session = this.sessions.get(sessionId)
     if (session) {
@@ -1101,7 +1111,7 @@ export class ClaudeAgentManager {
 
     // Store the SDK session ID so startSession will use it for resume
     sdkSessionIds.set(sessionId, sdkSessionIdToResume)
-    const result = await this.startSession(sessionId, { cwd, sdkSessionId: sdkSessionIdToResume })
+    const result = await this.startSession(sessionId, { cwd, sdkSessionId: sdkSessionIdToResume, model })
 
     // Load and replay historical messages from the JSONL file
     if (result) {

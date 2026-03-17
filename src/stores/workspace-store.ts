@@ -269,6 +269,18 @@ class WorkspaceStore {
     this.notify()
   }
 
+  updateTerminalModel(id: string, model: string): void {
+    this.state = {
+      ...this.state,
+      terminals: this.state.terminals.map(t =>
+        t.id === id ? { ...t, model } : t
+      )
+    }
+
+    this.notify()
+    this.save()
+  }
+
   appendScrollback(id: string, data: string): void {
     this.state = {
       ...this.state,
@@ -433,6 +445,7 @@ class WorkspaceStore {
       alias: t.alias,
       cwd: t.cwd,
       sdkSessionId: t.sdkSessionId,
+      model: t.model,
     }))
     const data = JSON.stringify({
       workspaces: this.state.workspaces,
@@ -459,6 +472,7 @@ class WorkspaceStore {
           alias: t.alias,
           cwd: t.cwd || '',
           sdkSessionId: t.sdkSessionId,
+          model: t.model,
           scrollbackBuffer: [],
           pid: undefined,
         }))

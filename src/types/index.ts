@@ -32,6 +32,7 @@ export interface TerminalInstance {
   lastActivityTime?: number;
   hasPendingAction?: boolean;
   sdkSessionId?: string;         // Claude SDK session ID for auto-resume
+  model?: string;                // Selected Claude model for this session
 }
 
 export interface AppState {

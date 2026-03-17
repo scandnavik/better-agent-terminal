@@ -525,14 +525,18 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
 
       const terminal = workspaceStore.getState().terminals.find(t => t.id === sessionId)
       const savedSdkSessionId = terminal?.sdkSessionId
+      const savedModel = terminal?.model
+
+      // Restore saved model to UI
+      if (savedModel) setCurrentModel(savedModel)
 
       if (savedSdkSessionId) {
         console.log(`${stag} AUTO-RESUME sdkSessionId=${savedSdkSessionId.slice(0, 8)}`)
         historyLoadedRef.current = true
-        window.electronAPI.claude.resumeSession(sessionId, savedSdkSessionId, cwd)
+        window.electronAPI.claude.resumeSession(sessionId, savedSdkSessionId, cwd, savedModel)
       } else {
         console.log(`${stag} FRESH startSession`)
-        window.electronAPI.claude.startSession(sessionId, { cwd, permissionMode: 'bypassPermissions' })
+        window.electronAPI.claude.startSession(sessionId, { cwd, permissionMode: 'bypassPermissions', model: savedModel })
       }
     }
     return () => {
@@ -619,7 +623,12 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
   const handleModelSelect = useCallback(async (modelValue: string) => {
     setShowModelList(false)
     setCurrentModel(modelValue)
-    await window.electronAPI.claude.setModel(sessionId, modelValue)
+    // "default" means use SDK default — don't call setModel, just clear override
+    if (modelValue !== 'default') {
+      await window.electronAPI.claude.setModel(sessionId, modelValue)
+    }
+    // Persist model selection to workspace store (including "default" to clear saved model)
+    workspaceStore.updateTerminalModel(sessionId, modelValue === 'default' ? '' : modelValue)
   }, [sessionId])
 
   const handleResumeSelect = useCallback(async (sdkSessionId: string) => {
@@ -895,7 +904,10 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
     const idx = availableModels.findIndex(m => m.value === currentModel)
     const next = availableModels[(idx + 1) % availableModels.length]
     setCurrentModel(next.value)
-    await window.electronAPI.claude.setModel(sessionId, next.value)
+    if (next.value !== 'default') {
+      await window.electronAPI.claude.setModel(sessionId, next.value)
+    }
+    workspaceStore.updateTerminalModel(sessionId, next.value === 'default' ? '' : next.value)
   }, [sessionId, currentModel, availableModels])
 
   const handleEffortChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {

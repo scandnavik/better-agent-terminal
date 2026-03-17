@@ -67,7 +67,7 @@ const electronAPI = {
     writeImage: (filePath: string) => ipcRenderer.invoke('clipboard:writeImage', filePath),
   },
   claude: {
-    startSession: (sessionId: string, options: { cwd: string; prompt?: string; permissionMode?: string }) =>
+    startSession: (sessionId: string, options: { cwd: string; prompt?: string; permissionMode?: string; model?: string }) =>
       ipcRenderer.invoke('claude:start-session', sessionId, options),
     sendMessage: (sessionId: string, prompt: string, images?: string[]) =>
       ipcRenderer.invoke('claude:send-message', sessionId, prompt, images),
@@ -139,8 +139,8 @@ const electronAPI = {
       ipcRenderer.invoke('claude:resolve-ask-user', sessionId, toolUseId, answers),
     listSessions: (cwd: string) =>
       ipcRenderer.invoke('claude:list-sessions', cwd),
-    resumeSession: (sessionId: string, sdkSessionId: string, cwd: string) =>
-      ipcRenderer.invoke('claude:resume-session', sessionId, sdkSessionId, cwd),
+    resumeSession: (sessionId: string, sdkSessionId: string, cwd: string, model?: string) =>
+      ipcRenderer.invoke('claude:resume-session', sessionId, sdkSessionId, cwd, model),
     restSession: (sessionId: string) =>
       ipcRenderer.invoke('claude:rest-session', sessionId) as Promise<boolean>,
     wakeSession: (sessionId: string) =>

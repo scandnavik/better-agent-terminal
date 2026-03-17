@@ -342,7 +342,7 @@ function registerProxiedHandlers() {
   })
 
   // Claude Agent SDK
-  registerHandler('claude:start-session', (sessionId: string, options: { cwd: string; prompt?: string; permissionMode?: string }) => claudeManager?.startSession(sessionId, options))
+  registerHandler('claude:start-session', (sessionId: string, options: { cwd: string; prompt?: string; permissionMode?: string; model?: string }) => claudeManager?.startSession(sessionId, options))
   registerHandler('claude:send-message', (sessionId: string, prompt: string, images?: string[]) => claudeManager?.sendMessage(sessionId, prompt, images))
   registerHandler('claude:stop-session', (sessionId: string) => claudeManager?.stopSession(sessionId))
   registerHandler('claude:set-permission-mode', (sessionId: string, mode: string) => claudeManager?.setPermissionMode(sessionId, mode as import('@anthropic-ai/claude-agent-sdk').PermissionMode))
@@ -357,7 +357,7 @@ function registerProxiedHandlers() {
   registerHandler('claude:resolve-permission', (sessionId: string, toolUseId: string, result: { behavior: string; updatedInput?: Record<string, unknown>; message?: string }) => claudeManager?.resolvePermission(sessionId, toolUseId, result))
   registerHandler('claude:resolve-ask-user', (sessionId: string, toolUseId: string, answers: Record<string, string>) => claudeManager?.resolveAskUser(sessionId, toolUseId, answers))
   registerHandler('claude:list-sessions', (cwd: string) => claudeManager?.listSessions(cwd))
-  registerHandler('claude:resume-session', (sessionId: string, sdkSessionId: string, cwd: string) => claudeManager?.resumeSession(sessionId, sdkSessionId, cwd))
+  registerHandler('claude:resume-session', (sessionId: string, sdkSessionId: string, cwd: string, model?: string) => claudeManager?.resumeSession(sessionId, sdkSessionId, cwd, model))
   registerHandler('claude:rest-session', (sessionId: string) => claudeManager?.restSession(sessionId))
   registerHandler('claude:wake-session', (sessionId: string) => claudeManager?.wakeSession(sessionId))
   registerHandler('claude:is-resting', (sessionId: string) => claudeManager?.isResting(sessionId) ?? false)
