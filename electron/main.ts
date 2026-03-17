@@ -55,8 +55,11 @@ process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled rejection:', reason)
 })
 
-// Note: GPU compositing is enabled (default). DWM resize hang was fixed by using
-// display:none for hidden terminals + will-resize throttle, not by disabling GPU.
+// GPU disk cache: set dedicated path to avoid "Unable to move the cache" errors on Windows.
+// These errors block GPU compositing and can add seconds to first paint.
+app.commandLine.appendSwitch('gpu-disk-cache-dir', path.join(app.getPath('temp'), 'bat-gpu-cache'))
+// Disable GPU shader disk cache (another source of "Unable to create cache" errors)
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache')
 
 // Set AppUserModelId for Windows taskbar pinning (must be before app.whenReady)
 if (process.platform === 'win32') {
@@ -214,7 +217,8 @@ function createWindow() {
     icon: path.join(__dirname, '../assets/icon.ico')
   })
 
-  // Show window as soon as DOM is ready (don't wait for all lazy chunks to load)
+  // Show window once DOM is ready — splash screen (inline HTML/CSS) is already painted,
+  // so the user sees the skeleton immediately while React loads behind it.
   mainWindow.webContents.once('dom-ready', () => {
     logger.log(`[startup] showing window (dom-ready)`)
     mainWindow?.show()

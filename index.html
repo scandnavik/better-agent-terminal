@@ -9,6 +9,7 @@
       /* Inline critical CSS for instant skeleton render */
       body { margin: 0; background: #1a1a1a; overflow: hidden; }
       #splash {
+        position: fixed; inset: 0; z-index: 9999;
         display: flex; height: 100vh; color: #888; font-family: system-ui;
       }
       #splash-sidebar {
@@ -27,7 +28,7 @@
       </div>
       <div id="splash-main"><span>Loading...</span></div>
     </div>
-    <div id="root" style="display:none"></div>
+    <div id="root"></div>
     <script>window.__t0 = Date.now();</script>
     <script type="module" src="/src/main.tsx"></script>
   </body>

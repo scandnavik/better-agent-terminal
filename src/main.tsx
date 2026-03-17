@@ -19,10 +19,10 @@ const t0 = (window as unknown as { __t0?: number }).__t0 || Date.now()
 dlog(`[startup] ── renderer ──────────────────────────────`)
 dlog(`[startup] main.tsx top-level: +${Date.now() - t0}ms from HTML <script>`)
 
-// Hide splash, show React root
+// Keep splash visible — React root is hidden behind it.
+// Splash will be removed once React has painted (see rAF below).
 const splash = document.getElementById('splash')
 const root = document.getElementById('root')!
-if (splash) splash.style.display = 'none'
 root.style.display = ''
 
 dlog(`[startup] before createRoot: +${Date.now() - t0}ms`)
@@ -31,7 +31,12 @@ ReactDOM.createRoot(root).render(<App />)
 
 dlog(`[startup] after render() queued: +${Date.now() - t0}ms`)
 
-// Track first paint after React mounts
+// Remove splash only after React has committed to DOM and browser is ready to paint.
+// Using double-rAF: first rAF fires before paint, second fires after paint is
+// actually flushed — ensures React content is visible before we remove splash.
 requestAnimationFrame(() => {
-  dlog(`[startup] first rAF (React painted): +${Date.now() - t0}ms from HTML`)
+  requestAnimationFrame(() => {
+    if (splash) splash.remove()
+    dlog(`[startup] splash removed (React painted): +${Date.now() - t0}ms from HTML`)
+  })
 })
