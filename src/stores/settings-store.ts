@@ -1,6 +1,6 @@
-import type { AppSettings, ShellType, FontType, ColorPresetId, EnvVariable, AgentCommandType } from '../types'
+import type { AppSettings, ShellType, FontType, ColorPresetId, EnvVariable, AgentCommandType, StatuslineItemConfig, StatuslineItemId } from '../types'
 import type { AgentPresetId } from '../types/agent-presets'
-import { FONT_OPTIONS, COLOR_PRESETS, AGENT_COMMAND_OPTIONS } from '../types'
+import { FONT_OPTIONS, COLOR_PRESETS, AGENT_COMMAND_OPTIONS, STATUSLINE_ITEMS } from '../types'
 
 type Listener = () => void
 
@@ -208,6 +208,30 @@ class SettingsStore {
     return preset || COLOR_PRESETS[0]
   }
 
+  // Statusline configuration
+  getStatuslineItems(): StatuslineItemConfig[] {
+    if (this.settings.statuslineItems?.length) {
+      const savedIds = new Set(this.settings.statuslineItems.map(i => i.id))
+      const missing = STATUSLINE_ITEMS
+        .filter(d => !savedIds.has(d.id))
+        .map(d => ({ id: d.id, visible: d.defaultVisible, align: 'left' as const }))
+      return [...this.settings.statuslineItems, ...missing]
+    }
+    // Default: left = session/context, right = limits/prompts
+    return STATUSLINE_ITEMS.map(d => ({
+      id: d.id,
+      visible: d.defaultVisible,
+      align: (d.group === 'limits' || d.group === 'actions' ? 'right' : 'left') as 'left' | 'right',
+      separatorAfter: d.id === 'duration' || d.id === 'cost' || d.id === 'usage7dReset',
+    }))
+  }
+
+  setStatuslineItems(items: StatuslineItemConfig[]): void {
+    this.settings = { ...this.settings, statuslineItems: items }
+    this.notify()
+    this.save()
+  }
+
   // Get the actual CSS font-family string based on settings
   getFontFamilyString(): string {
     if (this.settings.fontFamily === 'custom' && this.settings.customFontFamily) {
@@ -237,3 +261,58 @@ class SettingsStore {
 }
 
 export const settingsStore = new SettingsStore()
+
+// Template string → config
+export function parseStatuslineTemplate(template: string): StatuslineItemConfig[] {
+  const allIds = new Set(STATUSLINE_ITEMS.map(d => d.id))
+  const alignZones = template.split('|').map(s => s.trim())
+  const aligns: Array<'left' | 'center' | 'right'> =
+    alignZones.length >= 3 ? ['left', 'center', 'right'] :
+    alignZones.length === 2 ? ['left', 'right'] : ['left']
+
+  const result: StatuslineItemConfig[] = []
+  const seenIds = new Set<string>()
+
+  for (let zi = 0; zi < alignZones.length && zi < 3; zi++) {
+    const align = aligns[zi]
+    const sections = alignZones[zi].split('>').map(s => s.trim()).filter(Boolean)
+    for (let si = 0; si < sections.length; si++) {
+      const ids = sections[si].split(',').map(s => s.trim()).filter(s => allIds.has(s))
+      for (let ii = 0; ii < ids.length; ii++) {
+        if (seenIds.has(ids[ii])) continue
+        seenIds.add(ids[ii])
+        result.push({
+          id: ids[ii] as StatuslineItemId,
+          visible: true,
+          align,
+          separatorAfter: ii === ids.length - 1 && si < sections.length - 1,
+        })
+      }
+    }
+  }
+  for (const def of STATUSLINE_ITEMS) {
+    if (!seenIds.has(def.id)) {
+      result.push({ id: def.id, visible: false, align: 'left' })
+    }
+  }
+  return result
+}
+
+// Config → template string
+export function exportStatuslineTemplate(items: StatuslineItemConfig[]): string {
+  const zones: Record<string, string[][]> = { left: [[]], center: [[]], right: [[]] }
+  for (const item of items.filter(i => i.visible)) {
+    const align = item.align || 'left'
+    if (!zones[align]) zones[align] = [[]]
+    zones[align][zones[align].length - 1].push(item.id)
+    if (item.separatorAfter) zones[align].push([])
+  }
+  const fmt = (sections: string[][]) =>
+    sections.filter(s => s.length).map(s => s.join(',')).join(' > ')
+  const left = fmt(zones.left)
+  const center = fmt(zones.center)
+  const right = fmt(zones.right)
+  if (center) return [left, center, right].filter(Boolean).join(' | ')
+  if (right) return [left, right].filter(Boolean).join(' | ')
+  return left
+}

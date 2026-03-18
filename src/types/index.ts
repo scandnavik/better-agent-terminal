@@ -188,4 +188,45 @@ export interface AppSettings {
   createDefaultAgentTerminal: boolean;  // 是否預設建立 Agent Terminal
   allowBypassPermissions: boolean;  // 允許切換 bypassPermissions 模式時不再確認
   enable1MContext: boolean;  // 啟用 1M token context (僅 Sonnet 4/4.5)
+  statuslineItems?: StatuslineItemConfig[];  // 自訂 statusline 項目排序和顯示
 }
+
+// ============================================
+//   Statusline Configuration
+// ============================================
+
+export type StatuslineItemId =
+  | 'sessionId' | 'tokens' | 'turns' | 'duration'
+  | 'contextPct' | 'cost' | 'workspace'
+  | 'usage5h' | 'usage5hReset' | 'usage7d' | 'usage7dReset'
+  | 'prompts'
+
+export interface StatuslineItemConfig {
+  id: StatuslineItemId
+  visible: boolean
+  separatorAfter?: boolean
+  align?: 'left' | 'center' | 'right'
+}
+
+export interface StatuslineItemDef {
+  id: StatuslineItemId
+  label: string
+  description: string
+  defaultVisible: boolean
+  group: 'session' | 'context' | 'limits' | 'actions'
+}
+
+export const STATUSLINE_ITEMS: StatuslineItemDef[] = [
+  { id: 'sessionId',    label: 'Session ID',  description: 'First 8 chars of SDK session ID (click to resume)',   defaultVisible: true,  group: 'session' },
+  { id: 'tokens',       label: 'Tokens',      description: 'Total input + output token count',                    defaultVisible: true,  group: 'session' },
+  { id: 'turns',        label: 'Turns',        description: 'Number of conversation turns',                       defaultVisible: true,  group: 'session' },
+  { id: 'duration',     label: 'Duration',     description: 'Session duration in seconds',                        defaultVisible: true,  group: 'session' },
+  { id: 'contextPct',   label: 'Context %',    description: 'Percentage of context window used',                  defaultVisible: true,  group: 'context' },
+  { id: 'cost',         label: 'Cost',         description: 'Total session cost in USD',                          defaultVisible: true,  group: 'context' },
+  { id: 'workspace',    label: 'Workspace',    description: 'Current workspace name',                             defaultVisible: false, group: 'context' },
+  { id: 'usage5h',      label: '5h Usage',     description: '5-hour usage percentage',                            defaultVisible: true,  group: 'limits' },
+  { id: 'usage5hReset', label: '5h Reset',     description: '5-hour usage reset countdown',                       defaultVisible: true,  group: 'limits' },
+  { id: 'usage7d',      label: '7d Usage',     description: '7-day usage percentage',                             defaultVisible: true,  group: 'limits' },
+  { id: 'usage7dReset', label: '7d Reset',     description: '7-day usage reset countdown',                        defaultVisible: true,  group: 'limits' },
+  { id: 'prompts',      label: 'Prompts',      description: 'Link to view prompt history',                        defaultVisible: true,  group: 'actions' },
+]

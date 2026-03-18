@@ -125,6 +125,7 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
   const [taskModalTick, setTaskModalTick] = useState(0)
   const [showPromptHistory, setShowPromptHistory] = useState(false)
   const [promptSuggestion, setPromptSuggestion] = useState<string | null>(null)
+  const [statuslineConfig, setStatuslineConfig] = useState(settingsStore.getStatuslineItems())
   const [accountInfo, setAccountInfo] = useState<{ email?: string; organization?: string; subscriptionType?: string } | null>(null)
   const [slashCommands, setSlashCommands] = useState<SlashCommandInfo[]>([])
   const [showSlashMenu, setShowSlashMenu] = useState(false)
@@ -695,10 +696,11 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
     window.electronAPI.git.getBranch(cwd).then(branch => setGitBranch(branch)).catch(() => setGitBranch(null))
   }, [cwd])
 
-  // Subscribe to font size changes from settings
+  // Subscribe to settings changes (font size, statusline config)
   useEffect(() => {
     return settingsStore.subscribe(() => {
       setClaudeFontSize(settingsStore.getSettings().fontSize)
+      setStatuslineConfig(settingsStore.getStatuslineItems())
     })
   }, [])
 
@@ -2666,90 +2668,103 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
       })()}
 
       {/* Status line — always visible, visually attached to input-area when present */}
-      <div className={`claude-statusline-bar${!pendingPermission && !pendingQuestion && !showResumeList && !showModelList ? ' attached' : ''}`}>
-        <div className="claude-statusline">
-          {/* Session info group */}
-          <span
-            className="claude-statusline-item claude-statusline-clickable"
-            onClick={async () => {
-              setResumeLoading(true)
-              setShowResumeList(true)
-              try {
-                const sessions = await window.electronAPI.claude.listSessions(cwd)
-                setResumeSessions(sessions || [])
-              } catch {
-                setResumeSessions([])
-              } finally {
-                setResumeLoading(false)
-              }
-            }}
-            title={sessionMeta?.sdkSessionId
-              ? `SDK Session: ${sessionMeta.sdkSessionId}\nPanel: ${sessionId}\nClick to resume a session`
-              : `Panel: ${sessionId}\nClick to resume a session`
-            }
-          >
-            {sessionMeta?.sdkSessionId
-              ? sessionMeta.sdkSessionId.slice(0, 8)
-              : sessionId.slice(0, 8)
-            }
-          </span>
-          {sessionMeta && (
-            <span className="claude-statusline-item" title={`in: ${sessionMeta.inputTokens.toLocaleString()} / out: ${sessionMeta.outputTokens.toLocaleString()}`}>
+      {(() => {
+        const fmtRemaining = (d: Date) => {
+          const ms = d.getTime() - Date.now()
+          if (ms <= 0) return '0m'
+          const h = Math.floor(ms / 3600000)
+          const m = Math.floor((ms % 3600000) / 60000)
+          return h > 24 ? `${Math.floor(h / 24)}d${h % 24}h` : h > 0 ? `${h}h${m}m` : `${m}m`
+        }
+
+        const renderers: Record<string, () => React.ReactNode | null> = {
+          sessionId: () => (
+            <span key="sessionId" className="claude-statusline-item claude-statusline-clickable"
+              onClick={async () => {
+                setResumeLoading(true); setShowResumeList(true)
+                try { setResumeSessions(await window.electronAPI.claude.listSessions(cwd) || []) }
+                catch { setResumeSessions([]) }
+                finally { setResumeLoading(false) }
+              }}
+              title={sessionMeta?.sdkSessionId
+                ? `SDK Session: ${sessionMeta.sdkSessionId}\nPanel: ${sessionId}\nClick to resume`
+                : `Panel: ${sessionId}\nClick to resume`}
+            >
+              {sessionMeta?.sdkSessionId ? sessionMeta.sdkSessionId.slice(0, 8) : sessionId.slice(0, 8)}
+            </span>
+          ),
+          tokens: () => !sessionMeta ? null : (
+            <span key="tokens" className="claude-statusline-item" title={`in: ${sessionMeta.inputTokens.toLocaleString()} / out: ${sessionMeta.outputTokens.toLocaleString()}`}>
               {(sessionMeta.inputTokens + sessionMeta.outputTokens).toLocaleString()} tok
             </span>
-          )}
-          {sessionMeta && sessionMeta.numTurns > 0 && (
-            <span className="claude-statusline-item">{sessionMeta.numTurns} turns</span>
-          )}
-          {sessionMeta && sessionMeta.durationMs > 0 && (
-            <span className="claude-statusline-item">{(sessionMeta.durationMs / 1000).toFixed(1)}s</span>
-          )}
-
-          {/* Separator: session | cost */}
-          {sessionMeta && sessionMeta.contextWindow > 0 && <span className="claude-statusline-sep">&middot;</span>}
-
-          {/* Cost & context group */}
-          {sessionMeta && sessionMeta.contextWindow > 0 && (
-            <span className="claude-statusline-item" title={`${(sessionMeta.inputTokens + sessionMeta.outputTokens).toLocaleString()} / ${sessionMeta.contextWindow.toLocaleString()} tokens`}>
+          ),
+          turns: () => !sessionMeta || sessionMeta.numTurns <= 0 ? null : (
+            <span key="turns" className="claude-statusline-item">{sessionMeta.numTurns} turns</span>
+          ),
+          duration: () => !sessionMeta || sessionMeta.durationMs <= 0 ? null : (
+            <span key="duration" className="claude-statusline-item">{(sessionMeta.durationMs / 1000).toFixed(1)}s</span>
+          ),
+          contextPct: () => !sessionMeta || sessionMeta.contextWindow <= 0 ? null : (
+            <span key="contextPct" className="claude-statusline-item" title={`${(sessionMeta.inputTokens + sessionMeta.outputTokens).toLocaleString()} / ${sessionMeta.contextWindow.toLocaleString()} tokens`}>
               ctx {Math.round(((sessionMeta.inputTokens + sessionMeta.outputTokens) / sessionMeta.contextWindow) * 100)}%
             </span>
-          )}
-          {sessionMeta && sessionMeta.totalCost > 0 && (
-            <span className="claude-statusline-item">${sessionMeta.totalCost.toFixed(4)}</span>
-          )}
+          ),
+          cost: () => !sessionMeta || sessionMeta.totalCost <= 0 ? null : (
+            <span key="cost" className="claude-statusline-item">${sessionMeta.totalCost.toFixed(4)}</span>
+          ),
+          workspace: () => {
+            const ws = workspaceId ? workspaceStore.getState().workspaces.find(w => w.id === workspaceId) : null
+            return ws ? <span key="workspace" className="claude-statusline-item">{ws.alias || ws.name}</span> : null
+          },
+          usage5h: () => claudeUsage?.fiveHour == null ? null : (
+            <span key="usage5h" className={`claude-statusline-item${claudeUsage.fiveHour > 80 ? ' claude-usage-high' : claudeUsage.fiveHour > 50 ? ' claude-usage-mid' : ''}`}>
+              5h:{Math.round(claudeUsage.fiveHour)}%
+            </span>
+          ),
+          usage5hReset: () => {
+            if (!claudeUsage?.fiveHourReset) return null
+            return <span key="usage5hReset" className="claude-statusline-item">↻{fmtRemaining(new Date(claudeUsage.fiveHourReset))}</span>
+          },
+          usage7d: () => claudeUsage?.sevenDay == null ? null : (
+            <span key="usage7d" className={`claude-statusline-item${(claudeUsage.sevenDay ?? 0) > 80 ? ' claude-usage-high' : (claudeUsage.sevenDay ?? 0) > 50 ? ' claude-usage-mid' : ''}`}>
+              7d:{Math.round(claudeUsage.sevenDay ?? 0)}%
+            </span>
+          ),
+          usage7dReset: () => {
+            if (!claudeUsage?.sevenDayReset) return null
+            return <span key="usage7dReset" className="claude-statusline-item">↻{fmtRemaining(new Date(claudeUsage.sevenDayReset))}</span>
+          },
+          prompts: () => (
+            <span key="prompts" className="claude-statusline-item claude-statusline-clickable"
+              onClick={() => setShowPromptHistory(true)} title="View prompt history">prompts</span>
+          ),
+        }
 
-          {/* Separator: cost | rate limits */}
-          {claudeUsage && claudeUsage.fiveHour != null && <span className="claude-statusline-sep">&middot;</span>}
+        const renderZone = (align: 'left' | 'center' | 'right') => {
+          const items = statuslineConfig.filter(c => c.visible && (c.align || 'left') === align)
+          const nodes: React.ReactNode[] = []
+          for (const item of items) {
+            const node = renderers[item.id]?.()
+            if (!node) continue
+            nodes.push(node)
+            if (item.separatorAfter) nodes.push(<span key={`sep-${item.id}`} className="claude-statusline-sep">&middot;</span>)
+          }
+          return nodes
+        }
 
-          {/* Rate limits group */}
-          {claudeUsage && claudeUsage.fiveHour != null && (() => {
-            const fmtRemaining = (d: Date) => {
-              const ms = d.getTime() - Date.now()
-              if (ms <= 0) return '0m'
-              const h = Math.floor(ms / 3600000)
-              const m = Math.floor((ms % 3600000) / 60000)
-              return h > 24 ? `${Math.floor(h / 24)}d${h % 24}h` : h > 0 ? `${h}h${m}m` : `${m}m`
-            }
-            const fiveReset = claudeUsage.fiveHourReset ? fmtRemaining(new Date(claudeUsage.fiveHourReset)) : null
-            const sevenReset = claudeUsage.sevenDayReset ? fmtRemaining(new Date(claudeUsage.sevenDayReset)) : null
-            return (
-              <span
-                className={`claude-statusline-item${claudeUsage.fiveHour > 80 ? ' claude-usage-high' : claudeUsage.fiveHour > 50 ? ' claude-usage-mid' : ''}`}
-              >
-                5h:{Math.round(claudeUsage.fiveHour)}%{fiveReset ? ` ↻${fiveReset}` : ''} · 7d:{Math.round(claudeUsage.sevenDay ?? 0)}%{sevenReset ? ` ↻${sevenReset}` : ''}
-              </span>
-            )
-          })()}
+        const hasCenter = statuslineConfig.some(c => c.visible && c.align === 'center')
+        const hasRight = statuslineConfig.some(c => c.visible && c.align === 'right')
 
-          {/* Right-aligned prompts link */}
-          <span className="claude-status-spacer" />
-          <span
-            className="claude-statusline-item claude-statusline-clickable"
-            onClick={() => setShowPromptHistory(true)}
-            title="View prompt history"
-          >prompts</span>
-        </div>
-      </div>
+        return (
+          <div className={`claude-statusline-bar${!pendingPermission && !pendingQuestion && !showResumeList && !showModelList ? ' attached' : ''}`}>
+            <div className="claude-statusline">
+              <div className="claude-statusline-left">{renderZone('left')}</div>
+              {hasCenter && <div className="claude-statusline-center">{renderZone('center')}</div>}
+              {hasRight && <div className="claude-statusline-right">{renderZone('right')}</div>}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

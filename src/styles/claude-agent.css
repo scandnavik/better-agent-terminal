@@ -1619,11 +1619,19 @@
 .claude-statusline {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
   padding: 3px 12px;
   font-size: calc(var(--claude-font-size) - 2px);
   color: var(--text-secondary);
   min-height: 22px;
+}
+
+.claude-statusline-left,
+.claude-statusline-center,
+.claude-statusline-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .claude-statusline-sep {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import type { AppSettings, ShellType, FontType, ColorPresetId } from '../types'
-import { FONT_OPTIONS, COLOR_PRESETS, SHELL_OPTIONS } from '../types'
-import { settingsStore } from '../stores/settings-store'
+import type { AppSettings, ShellType, FontType, ColorPresetId, StatuslineItemConfig } from '../types'
+import { FONT_OPTIONS, COLOR_PRESETS, SHELL_OPTIONS, STATUSLINE_ITEMS } from '../types'
+import { settingsStore, parseStatuslineTemplate, exportStatuslineTemplate } from '../stores/settings-store'
 import { EnvVarEditor } from './EnvVarEditor'
 import { AGENT_PRESETS, AgentPresetId } from '../types/agent-presets'
 
@@ -42,6 +42,14 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [serverPort, setServerPort] = useState('9876')
   const [serverToken, setServerToken] = useState<string | null>(null)
   const [clientStatus, setClientStatus] = useState<RemoteClientStatus>({ connected: false, info: null })
+
+  // Statusline config state
+  const [slItems, setSlItems] = useState<StatuslineItemConfig[]>(settingsStore.getStatuslineItems())
+  const [slDragId, setSlDragId] = useState<string | null>(null)
+  const [slDropId, setSlDropId] = useState<string | null>(null)
+  const [slDropPos, setSlDropPos] = useState<'before' | 'after'>('before')
+  const [slImporting, setSlImporting] = useState(false)
+  const [slImportText, setSlImportText] = useState('')
 
   // Get current platform for filtering shell options
   const platform = window.electronAPI?.platform || 'darwin'
@@ -362,6 +370,121 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               >
                 $ echo "Hello World" 你好世界 0123456789
               </div>
+            </div>
+          </div>
+
+          {/* Statusline Configuration */}
+          <div className="settings-section">
+            <h3>Statusline</h3>
+            <p className="settings-hint" style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Drag to reorder, toggle visibility. Hover for description. Use L/C/R for alignment. Use &gt; for separator.
+            </p>
+            <div className="statusline-config-list">
+              {slItems.map(item => {
+                const def = STATUSLINE_ITEMS.find(d => d.id === item.id)
+                if (!def) return null
+                return (
+                  <div key={item.id}
+                    className={`statusline-config-item${slDragId === item.id ? ' dragging' : ''}${slDropId === item.id ? ` drop-${slDropPos}` : ''}`}
+                    draggable
+                    onDragStart={() => setSlDragId(item.id)}
+                    onDragEnd={() => { setSlDragId(null); setSlDropId(null) }}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      const rect = e.currentTarget.getBoundingClientRect()
+                      setSlDropPos(e.clientY < rect.top + rect.height / 2 ? 'before' : 'after')
+                      setSlDropId(item.id)
+                    }}
+                    onDragLeave={() => setSlDropId(null)}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      if (!slDragId || slDragId === item.id) return
+                      const items = [...slItems]
+                      const dragIdx = items.findIndex(i => i.id === slDragId)
+                      const targetIdx = items.findIndex(i => i.id === item.id)
+                      if (dragIdx === -1 || targetIdx === -1) return
+                      const [dragged] = items.splice(dragIdx, 1)
+                      const insertIdx = slDropPos === 'after' ? targetIdx + (dragIdx < targetIdx ? 0 : 1) : targetIdx + (dragIdx < targetIdx ? -1 : 0)
+                      items.splice(Math.max(0, insertIdx), 0, dragged)
+                      setSlItems(items)
+                      settingsStore.setStatuslineItems(items)
+                      setSlDragId(null); setSlDropId(null)
+                    }}
+                    title={def.description}
+                  >
+                    <span className="statusline-config-drag">&#x2630;</span>
+                    <span className="statusline-config-label">{def.label}</span>
+                    <span className="statusline-config-align">
+                      {(['left', 'center', 'right'] as const).map(a => (
+                        <button key={a}
+                          className={`statusline-align-btn${(item.align || 'left') === a ? ' active' : ''}`}
+                          onClick={() => {
+                            const updated = slItems.map(i => i.id === item.id ? { ...i, align: a } : i)
+                            setSlItems(updated); settingsStore.setStatuslineItems(updated)
+                          }}
+                          title={a}
+                        >{a === 'left' ? 'L' : a === 'center' ? 'C' : 'R'}</button>
+                      ))}
+                    </span>
+                    <button
+                      className={`statusline-sep-btn${item.separatorAfter ? ' active' : ''}`}
+                      onClick={() => {
+                        const updated = slItems.map(i => i.id === item.id ? { ...i, separatorAfter: !i.separatorAfter } : i)
+                        setSlItems(updated); settingsStore.setStatuslineItems(updated)
+                      }}
+                      title="Toggle separator after this item"
+                    >&gt;</button>
+                    <label className="statusline-config-toggle">
+                      <input type="checkbox" checked={item.visible} onChange={() => {
+                        const updated = slItems.map(i => i.id === item.id ? { ...i, visible: !i.visible } : i)
+                        setSlItems(updated); settingsStore.setStatuslineItems(updated)
+                      }} />
+                    </label>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="statusline-template-bar" style={{ marginTop: '8px', display: 'flex', gap: '4px', alignItems: 'center' }}>
+              {slImporting ? (
+                <>
+                  <input
+                    value={slImportText}
+                    onChange={e => setSlImportText(e.target.value)}
+                    placeholder="sessionId,tokens > cost | prompts"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && slImportText.trim()) {
+                        const parsed = parseStatuslineTemplate(slImportText.trim())
+                        setSlItems(parsed); settingsStore.setStatuslineItems(parsed)
+                        setSlImporting(false); setSlImportText('')
+                      }
+                    }}
+                    autoFocus
+                    style={{ flex: 1, fontSize: '11px', padding: '3px 6px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '3px', color: 'var(--text-primary)' }}
+                  />
+                  <button className="statusline-template-btn" onClick={() => {
+                    if (!slImportText.trim()) return
+                    const parsed = parseStatuslineTemplate(slImportText.trim())
+                    setSlItems(parsed); settingsStore.setStatuslineItems(parsed)
+                    setSlImporting(false); setSlImportText('')
+                  }}>Apply</button>
+                  <button className="statusline-template-btn" onClick={() => { setSlImporting(false); setSlImportText('') }}>Cancel</button>
+                </>
+              ) : (
+                <>
+                  <input
+                    readOnly
+                    value={exportStatuslineTemplate(slItems)}
+                    style={{ flex: 1, fontSize: '11px', padding: '3px 6px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '3px', color: 'var(--text-secondary)' }}
+                    title="Current template string"
+                  />
+                  <button className="statusline-template-btn" onClick={() => navigator.clipboard.writeText(exportStatuslineTemplate(slItems))}>Copy</button>
+                  <button className="statusline-template-btn" onClick={() => setSlImporting(true)}>Import</button>
+                  <button className="statusline-template-btn" onClick={() => {
+                    settingsStore.setStatuslineItems(undefined as unknown as StatuslineItemConfig[])
+                    setSlItems(settingsStore.getStatuslineItems())
+                  }}>Reset</button>
+                </>
+              )}
             </div>
           </div>
 
