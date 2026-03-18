@@ -1621,7 +1621,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 3px 12px;
-  font-size: calc(var(--claude-font-size) - 2px);
+  font-size: var(--claude-font-size);
   color: var(--text-secondary);
   min-height: 22px;
 }

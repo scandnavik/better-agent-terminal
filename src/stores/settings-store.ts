@@ -217,13 +217,8 @@ class SettingsStore {
         .map(d => ({ id: d.id, visible: d.defaultVisible, align: 'left' as const }))
       return [...this.settings.statuslineItems, ...missing]
     }
-    // Default: all left-aligned with separators between groups
-    return STATUSLINE_ITEMS.map(d => ({
-      id: d.id,
-      visible: d.defaultVisible,
-      align: 'left' as const,
-      separatorAfter: d.id === 'duration' || d.id === 'cost' || d.id === 'usage7dReset',
-    }))
+    // Default template: gitBranch(#61afef),sessionId(#d19a66) > tokens,turns,duration > contextPct(#d19a66),cost > usage5h,usage5hReset > usage7d(#e5c07b),usage7dReset(#e5c07b) > prompts(#d19a66)
+    return parseStatuslineTemplate('gitBranch(#61afef),sessionId(#d19a66) > tokens,turns,duration > contextPct(#d19a66),cost > usage5h,usage5hReset > usage7d(#e5c07b),usage7dReset(#e5c07b) > prompts(#d19a66)')
   }
 
   setStatuslineItems(items: StatuslineItemConfig[]): void {
