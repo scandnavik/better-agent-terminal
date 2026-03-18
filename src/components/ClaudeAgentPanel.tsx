@@ -121,7 +121,7 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
   const subagentMessagesRef = useRef<Map<string, MessageItem[]>>(new Map())
   const [subagentStreamingText, setSubagentStreamingText] = useState<Map<string, string>>(new Map())
   const [subagentStreamingThinking, setSubagentStreamingThinking] = useState<Map<string, string>>(new Map())
-  const [taskModal, setTaskModal] = useState<{ taskId: string; label: string } | null>(null)
+  const [taskModal, setTaskModal] = useState<{ taskId: string; label: string; subagentType?: string } | null>(null)
   const [taskModalTick, setTaskModalTick] = useState(0)
   const [showPromptHistory, setShowPromptHistory] = useState(false)
   const [promptSuggestion, setPromptSuggestion] = useState<string | null>(null)
@@ -1569,13 +1569,13 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
                 {item.status === 'running' && item.timestamp > 0 && (
                   <span className="claude-task-tag claude-task-elapsed">{formatElapsed(item.timestamp)}</span>
                 )}
-                <button className="claude-subagent-view-btn" onClick={(e) => {
+                <button className="claude-subagent-log-btn" onClick={(e) => {
                   e.stopPropagation()
                   const taskLabel = item.input.description
                     ? String(item.input.description).slice(0, 60)
                     : item.input.subagent_type ? String(item.input.subagent_type) : 'Task'
-                  setTaskModal({ taskId: item.id, label: taskLabel })
-                }}>View</button>
+                  setTaskModal({ taskId: item.id, label: taskLabel, subagentType: item.input.subagent_type ? String(item.input.subagent_type) : undefined })
+                }}>Log</button>
                 {item.timestamp > 0 && <span className="claude-tool-time" title={formatFullTimestamp(item.timestamp)}>{formatTimestamp(item.timestamp)}</span>}
               </div>
               {item.status === 'running' && progressDesc && (
@@ -2053,7 +2053,7 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
               <div
                 key={task.id}
                 className="claude-active-task-item"
-                onClick={() => setTaskModal({ taskId: task.id, label })}
+                onClick={() => setTaskModal({ taskId: task.id, label, subagentType: task.input.subagent_type ? String(task.input.subagent_type) : undefined })}
               >
                 <span className="claude-active-task-dot" />
                 <span className="claude-active-task-label">{label}</span>
@@ -2571,6 +2571,8 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
             <div className="claude-plan-modal claude-subagent-modal" onClick={e => e.stopPropagation()}>
               <div className="claude-plan-modal-header">
                 {isRunning && <span className="claude-active-task-dot" />}
+                <span className="claude-tool-name" style={{ marginRight: 4 }}>Task</span>
+                {taskModal.subagentType && <span className="claude-tool-badge" style={{ marginRight: 6 }}>{taskModal.subagentType}</span>}
                 <span className="claude-plan-modal-title">{taskModal.label}</span>
                 <span className="claude-subagent-meta">
                   {taskMsgs.length} messages
@@ -2578,7 +2580,15 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
                 </span>
                 <button className="claude-plan-modal-close" onClick={() => setTaskModal(null)}>&times;</button>
               </div>
-              <div className="claude-subagent-body">
+              <div className="claude-subagent-body" ref={el => {
+                if (!el) return
+                const body = el
+                // Auto-scroll to bottom when content updates
+                const isNearBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 80
+                if (isNearBottom) {
+                  requestAnimationFrame(() => { body.scrollTop = body.scrollHeight })
+                }
+              }}>
                 <div className="claude-messages claude-timeline">
                   {taskMsgs.map((item, i) => renderMessage(item, i))}
                   {isRunning && streamThink && (

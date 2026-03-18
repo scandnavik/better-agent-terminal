@@ -1960,3 +1960,20 @@
 .claude-subagent-view-btn:hover {
   background: var(--bg-hover);
 }
+
+.claude-subagent-log-btn {
+  font-size: calc(var(--claude-font-size) - 2px);
+  font-weight: 600;
+  color: #1a1a1a;
+  background: #d29922;
+  border: none;
+  border-radius: 3px;
+  padding: 2px 8px;
+  cursor: pointer;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.claude-subagent-log-btn:hover {
+  background: #e5a82e;
+}
