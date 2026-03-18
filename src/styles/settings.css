@@ -537,34 +537,42 @@
   border-color: var(--accent-color);
 }
 
-.statusline-color-picker {
-  width: 20px;
-  height: 20px;
+.statusline-color-swatches {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.statusline-color-swatch {
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.1s;
+}
+
+.statusline-color-swatch:hover {
+  transform: scale(1.3);
+}
+
+.statusline-color-swatch.active {
+  border: 2px solid #fff;
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.4);
+}
+
+.statusline-color-custom {
+  width: 14px;
+  height: 14px;
   border: 1px solid var(--border-color);
-  border-radius: 3px;
+  border-radius: 2px;
   padding: 0;
   cursor: pointer;
   flex-shrink: 0;
   background: none;
-}
-
-.statusline-color-reset {
-  font-size: 10px;
-  width: 16px;
-  height: 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 2px;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.statusline-color-reset:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
 }
 
 .statusline-config-toggle {

@@ -434,22 +434,30 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                       }}
                       title="Toggle separator after this item"
                     >&gt;</button>
-                    <input
-                      type="color"
-                      className="statusline-color-picker"
-                      value={item.color || '#999999'}
-                      onChange={e => {
-                        const updated = slItems.map(i => i.id === item.id ? { ...i, color: e.target.value } : i)
-                        setSlItems(updated); settingsStore.setStatuslineItems(updated)
-                      }}
-                      title="Set color"
-                    />
-                    {item.color && (
-                      <button className="statusline-color-reset" onClick={() => {
-                        const updated = slItems.map(i => i.id === item.id ? { ...i, color: undefined } : i)
-                        setSlItems(updated); settingsStore.setStatuslineItems(updated)
-                      }} title="Reset color">x</button>
-                    )}
+                    <span className="statusline-color-swatches">
+                      {['', '#e06c75', '#e5c07b', '#98c379', '#56b6c2', '#61afef', '#c678dd', '#d19a66', '#abb2bf'].map(c => (
+                        <button
+                          key={c || 'default'}
+                          className={`statusline-color-swatch${(item.color || '') === c ? ' active' : ''}`}
+                          style={{ background: c || 'var(--text-secondary)' }}
+                          onClick={() => {
+                            const updated = slItems.map(i => i.id === item.id ? { ...i, color: c || undefined } : i)
+                            setSlItems(updated); settingsStore.setStatuslineItems(updated)
+                          }}
+                          title={c || 'Default'}
+                        />
+                      ))}
+                      <input
+                        type="color"
+                        className="statusline-color-custom"
+                        value={item.color || '#999999'}
+                        onChange={e => {
+                          const updated = slItems.map(i => i.id === item.id ? { ...i, color: e.target.value } : i)
+                          setSlItems(updated); settingsStore.setStatuslineItems(updated)
+                        }}
+                        title="Custom color"
+                      />
+                    </span>
                     <label className="statusline-config-toggle">
                       <input type="checkbox" checked={item.visible} onChange={() => {
                         const updated = slItems.map(i => i.id === item.id ? { ...i, visible: !i.visible } : i)

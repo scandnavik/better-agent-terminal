@@ -262,7 +262,15 @@ class SettingsStore {
 
 export const settingsStore = new SettingsStore()
 
+// Parse a single token like "sessionId(#e06c75)" → { id: "sessionId", color: "#e06c75" }
+function parseToken(token: string): { id: string; color?: string } {
+  const match = token.match(/^(\w+)\(([^)]+)\)$/)
+  if (match) return { id: match[1], color: match[2] }
+  return { id: token }
+}
+
 // Template string → config
+// Format: "sessionId(#e06c75),tokens > cost | prompts"
 export function parseStatuslineTemplate(template: string): StatuslineItemConfig[] {
   const allIds = new Set(STATUSLINE_ITEMS.map(d => d.id))
   const alignZones = template.split('|').map(s => s.trim())
@@ -277,15 +285,17 @@ export function parseStatuslineTemplate(template: string): StatuslineItemConfig[
     const align = aligns[zi]
     const sections = alignZones[zi].split('>').map(s => s.trim()).filter(Boolean)
     for (let si = 0; si < sections.length; si++) {
-      const ids = sections[si].split(',').map(s => s.trim()).filter(s => allIds.has(s))
-      for (let ii = 0; ii < ids.length; ii++) {
-        if (seenIds.has(ids[ii])) continue
-        seenIds.add(ids[ii])
+      const tokens = sections[si].split(',').map(s => s.trim()).filter(Boolean)
+      for (let ii = 0; ii < tokens.length; ii++) {
+        const { id, color } = parseToken(tokens[ii])
+        if (!allIds.has(id) || seenIds.has(id)) continue
+        seenIds.add(id)
         result.push({
-          id: ids[ii] as StatuslineItemId,
+          id: id as StatuslineItemId,
           visible: true,
           align,
-          separatorAfter: ii === ids.length - 1 && si < sections.length - 1,
+          color,
+          separatorAfter: ii === tokens.length - 1 && si < sections.length - 1,
         })
       }
     }
@@ -304,7 +314,8 @@ export function exportStatuslineTemplate(items: StatuslineItemConfig[]): string 
   for (const item of items.filter(i => i.visible)) {
     const align = item.align || 'left'
     if (!zones[align]) zones[align] = [[]]
-    zones[align][zones[align].length - 1].push(item.id)
+    const token = item.color ? `${item.id}(${item.color})` : item.id
+    zones[align][zones[align].length - 1].push(token)
     if (item.separatorAfter) zones[align].push([])
   }
   const fmt = (sections: string[][]) =>
