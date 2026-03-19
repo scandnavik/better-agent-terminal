@@ -98,9 +98,7 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "notarize": {
-        "teamId": "8JVDJGLLYR"
-      },
+      "notarize": false,
       "extendInfo": {
         "NSDocumentsFolderUsageDescription": "BetterAgentTerminal needs access to your Documents folder to open terminals and manage files in your projects.",
         "NSDesktopFolderUsageDescription": "BetterAgentTerminal needs access to your Desktop folder to open terminals and manage files in your projects.",
