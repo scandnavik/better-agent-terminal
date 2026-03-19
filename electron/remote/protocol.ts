@@ -28,7 +28,7 @@ export const PROXIED_CHANNELS = new Set([
   // Settings
   'settings:save', 'settings:load', 'settings:get-shell-path',
   // Git
-  'git:branch', 'git:log', 'git:diff', 'git:diff-files', 'git:status', 'git:get-github-url',
+  'git:branch', 'git:log', 'git:diff', 'git:diff-files', 'git:status', 'git:get-github-url', 'git:getRoot',
   // FS
   'fs:readdir', 'fs:readFile', 'fs:search',
   // Snippet

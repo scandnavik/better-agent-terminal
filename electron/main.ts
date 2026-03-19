@@ -776,6 +776,12 @@ function registerProxiedHandlers() {
       })
     } catch { return [] }
   })
+  registerHandler('git:getRoot', async (cwd: string) => {
+    try {
+      const { execSync } = await import('child_process')
+      return execSync('git rev-parse --show-toplevel', { cwd, encoding: 'utf-8', timeout: 5000 }).trim()
+    } catch { return null }
+  })
   registerHandler('git:status', async (cwd: string) => {
     try {
       const { execSync } = await import('child_process')
