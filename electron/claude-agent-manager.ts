@@ -132,8 +132,6 @@ interface SessionInstance {
 // Persists SDK session IDs across stop/restart so we can resume conversations
 const sdkSessionIds = new Map<string, string>()
 
-let forkSessionFn: typeof import('@anthropic-ai/claude-agent-sdk').forkSession | null = null
-
 export class ClaudeAgentManager {
   private sessions: Map<string, SessionInstance> = new Map()
   private getWindows: () => BrowserWindow[]
@@ -1443,15 +1441,60 @@ export class ClaudeAgentManager {
   async forkSession(sessionId: string): Promise<{ newSdkSessionId: string } | null> {
     const session = this.sessions.get(sessionId)
     const currentSdkId = session?.sdkSessionId || sdkSessionIds.get(sessionId)
-    if (!currentSdkId) return null
-
-    const cwd = session?.cwd
-    if (!forkSessionFn) {
-      const sdk = await import('@anthropic-ai/claude-agent-sdk')
-      forkSessionFn = sdk.forkSession
+    if (!currentSdkId) {
+      logger.warn(`[forkSession] no sdkSessionId for session ${sessionId.slice(0, 8)}`)
+      return null
     }
-    const result = await forkSessionFn(currentSdkId, { dir: cwd })
-    return { newSdkSessionId: result.sessionId }
+
+    // sdk.forkSession is NOT an exported function — it's a QueryOptions boolean.
+    // Correct approach: call query() with { resume: currentSdkId, forkSession: true },
+    // capture the new session_id from system:init, then abort immediately.
+    const query = await getQuery()
+    const claudeCodePath = resolveClaudeCodePath()
+    const nodeExecutable = getNodeExecutable()
+    const cwd = session?.cwd
+
+    logger.log(`[forkSession] starting: sdkSessionId=${currentSdkId.slice(0, 8)} cwd=${cwd}`)
+
+    const abortController = new AbortController()
+    let newSdkSessionId: string | null = null
+
+    try {
+      const generator = query({
+        prompt: ' ',
+        options: {
+          abortController,
+          cwd,
+          resume: currentSdkId,
+          forkSession: true,
+          ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
+          ...(nodeExecutable !== 'node' ? { executable: nodeExecutable } : {}),
+        } as Parameters<typeof query>[0]['options'],
+      })
+
+      for await (const message of generator) {
+        if (message.type === 'system' && (message as { subtype?: string }).subtype === 'init') {
+          newSdkSessionId = (message as { session_id: string }).session_id
+          logger.log(`[forkSession] received init, new session=${newSdkSessionId?.slice(0, 8)}`)
+          abortController.abort()
+          break
+        }
+      }
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e)
+      const isExpectedAbort = errMsg.includes('abort') || errMsg.includes('aborted') || abortController.signal.aborted
+      if (!isExpectedAbort) {
+        logger.error(`[forkSession] unexpected error:`, e)
+      }
+    }
+
+    if (!newSdkSessionId) {
+      logger.error(`[forkSession] failed — did not receive system:init`)
+      return null
+    }
+
+    logger.log(`[forkSession] success newSdkSessionId=${newSdkSessionId.slice(0, 8)}`)
+    return { newSdkSessionId }
   }
 
   dispose() {

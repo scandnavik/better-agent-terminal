@@ -842,9 +842,20 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
     const tag = `[Fork:${sessionId.slice(0, 8)}]`
     dlog(`${tag} start hasSdkSession=${hasSdkSession} workspaceId=${workspaceId}`)
     if (!hasSdkSession || !workspaceId) return
-    const result = await window.electronAPI.claude.forkSession(sessionId)
+    let result: { newSdkSessionId: string } | null = null
+    try {
+      result = await window.electronAPI.claude.forkSession(sessionId)
+    } catch (e) {
+      dlog(`${tag} forkSession threw:`, e)
+      alert('Fork failed: ' + (e instanceof Error ? e.message : String(e)))
+      return
+    }
     dlog(`${tag} forkSession result=`, result)
-    if (!result?.newSdkSessionId) return
+    if (!result?.newSdkSessionId) {
+      dlog(`${tag} fork returned null — check main process logs`)
+      alert('Fork failed: backend returned no session ID. Check that Claude session is active.')
+      return
+    }
 
     const prompt = inputValueRef.current.trim()
     const images = attachedImages.map(img => img.dataUrl)
