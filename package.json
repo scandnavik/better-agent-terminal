@@ -21,14 +21,17 @@
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.62",
     "@anthropic-ai/claude-code": "^2.1.49",
+    "@types/dompurify": "^3.0.5",
     "@types/qrcode": "^1.5.6",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-unicode11": "^0.8.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",
     "better-sqlite3": "^12.5.0",
+    "dompurify": "^3.3.3",
     "highlight.js": "^11.11.1",
     "i18next": "^25.8.18",
+    "marked": "^17.0.5",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -40,7 +43,6 @@
     "@lydell/node-pty": "^1.1.0"
   },
   "devDependencies": {
-
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",

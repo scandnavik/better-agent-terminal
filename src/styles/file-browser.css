@@ -618,3 +618,30 @@
   background: var(--bg-hover);
   font-weight: 600;
 }
+
+/* Task list checkboxes (GFM) */
+.file-preview-markdown input[type="checkbox"] {
+  margin-right: 6px;
+  vertical-align: middle;
+  pointer-events: none;
+}
+
+.file-preview-markdown li:has(> input[type="checkbox"]) {
+  list-style: none;
+  margin-left: -1.4em;
+}
+
+/* Strikethrough */
+.file-preview-markdown del {
+  color: var(--text-secondary);
+}
+
+/* Mermaid placeholder (Phase 3) */
+.file-preview-markdown .mermaid-placeholder {
+  border: 1px dashed var(--border-color);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 0.5em 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}

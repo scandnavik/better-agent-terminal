@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { HighlightedCode } from './PathLinker'
+import hljs from 'highlight.js/lib/core'
 
 interface FileEntry {
   name: string
@@ -121,56 +122,54 @@ function getFileIcon(name: string): string {
   }
 }
 
+// Markdown rendering using marked + DOMPurify + highlight.js
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+
+// Configure marked with GFM (tables, task lists, strikethrough) + highlight.js
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+})
+
+// Custom renderer for code blocks (syntax highlighting) and links (open in browser)
+const renderer = new marked.Renderer()
+
+renderer.code = function ({ text, lang }: { text: string; lang?: string }) {
+  // Mermaid blocks: render as placeholder div (Phase 3 will handle rendering)
+  if (lang === 'mermaid') {
+    return `<div class="mermaid-placeholder"><pre><code>${text}</code></pre></div>`
+  }
+  let highlighted: string
+  try {
+    highlighted = lang
+      ? hljs.highlight(text, { language: lang }).value
+      : hljs.highlightAuto(text).value
+  } catch {
+    highlighted = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  }
+  return `<pre><code class="hljs${lang ? ` language-${lang}` : ''}">${highlighted}</code></pre>`
+}
+
+renderer.link = function ({ href, text }: { href: string; text: string }) {
+  // Links open in external browser, not inside Electron
+  return `<a href="${href}" data-external-link="true">${text}</a>`
+}
+
+renderer.image = function ({ href, text }: { href: string; text: string }) {
+  // Support local file paths
+  const src = href.startsWith('/') ? `file://${href}` : href
+  return `<img alt="${text || ''}" src="${src}" style="max-width:100%"/>`
+}
+
+marked.use({ renderer })
+
 function renderMarkdown(text: string): string {
-  let html = text
-    // Escape HTML
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-
-  // Code blocks (``` ... ```)
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) =>
-    `<pre><code>${code.replace(/\n$/, '')}</code></pre>`)
-
-  // Headers
-  html = html.replace(/^######\s+(.+)$/gm, '<h6>$1</h6>')
-  html = html.replace(/^#####\s+(.+)$/gm, '<h5>$1</h5>')
-  html = html.replace(/^####\s+(.+)$/gm, '<h4>$1</h4>')
-  html = html.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
-  html = html.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
-  html = html.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
-
-  // Horizontal rule
-  html = html.replace(/^---+$/gm, '<hr/>')
-
-  // Images (before links)
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2" style="max-width:100%"/>')
-
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-
-  // Bold + italic
-  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
-
-  // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
-
-  // Unordered lists
-  html = html.replace(/^[\s]*[-*]\s+(.+)$/gm, '<li>$1</li>')
-  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
-
-  // Blockquote
-  html = html.replace(/^&gt;\s+(.+)$/gm, '<blockquote>$1</blockquote>')
-
-  // Paragraphs: wrap remaining non-tag lines
-  html = html.replace(/^(?!<[a-z/])(.*\S.*)$/gm, '<p>$1</p>')
-
-  // Clean up empty paragraphs
-  html = html.replace(/<p>\s*<\/p>/g, '')
-
-  return html
+  const rawHtml = marked.parse(text) as string
+  return DOMPurify.sanitize(rawHtml, {
+    ADD_TAGS: ['input'],  // Allow checkboxes for task lists
+    ADD_ATTR: ['checked', 'disabled', 'type', 'data-external-link'],
+  })
 }
 
 function FilePreview({ filePath, fileName }: { filePath: string; fileName: string }) {
@@ -243,7 +242,19 @@ function FilePreview({ filePath, fileName }: { filePath: string; fileName: strin
           </div>
         )}
         {isMarkdown && viewMode === 'rendered'
-          ? <div className="file-preview-markdown" dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }} />
+          ? <div
+              className="file-preview-markdown"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+              onClick={(e) => {
+                // Intercept link clicks → open in external browser
+                const target = e.target as HTMLElement
+                const link = target.closest('a[data-external-link]') as HTMLAnchorElement | null
+                if (link) {
+                  e.preventDefault()
+                  window.electronAPI.shell.openExternal(link.href)
+                }
+              }}
+            />
           : <HighlightedCode code={content} ext={getFileExt(fileName)} className="file-preview-text" />
         }
       </>
