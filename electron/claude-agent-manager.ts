@@ -359,7 +359,17 @@ export class ClaudeAgentManager {
       return true
     }
 
-    // Note: user message is added by the frontend — don't duplicate here
+    // Broadcast user message so all windows (including remote host) can see it.
+    // The sender's frontend already adds it locally; dedup by id prevents doubles.
+    const userMsg: ClaudeMessage = {
+      id: `user-${Date.now()}`,
+      sessionId,
+      role: 'user',
+      content: prompt + (images?.length ? `\n[${images.length} image${images.length > 1 ? 's' : ''} attached]` : ''),
+      timestamp: Date.now(),
+    }
+    this.addMessage(sessionId, userMsg)
+
     await this.runQuery(sessionId, prompt, images)
     return true
   }
@@ -605,6 +615,15 @@ export class ClaudeAgentManager {
                   parentToolUseId: message.parent_tool_use_id,
                   timestamp: Date.now(),
                 })
+                // Keep parent active task alive when subagent produces messages
+                if (message.parent_tool_use_id) {
+                  const parentTask = Array.from(session.activeTasks.values())
+                    .find(t => t.toolUseId === message.parent_tool_use_id)
+                  if (parentTask) {
+                    parentTask.lastProgressTime = Date.now()
+                    parentTask.stalled = false
+                  }
+                }
               }
               if ('type' in block && block.type === 'tool_use') {
                 const toolBlock = block as { id: string; name: string; input: Record<string, unknown> }
@@ -617,6 +636,28 @@ export class ClaudeAgentManager {
                   parentToolUseId: message.parent_tool_use_id,
                   timestamp: Date.now(),
                 })
+                // Update parent active task progress when subagent uses tools
+                if (message.parent_tool_use_id) {
+                  const parentTask = Array.from(session.activeTasks.values())
+                    .find(t => t.toolUseId === message.parent_tool_use_id)
+                  if (parentTask) {
+                    parentTask.lastProgressTime = Date.now()
+                    parentTask.stalled = false
+                    const toolLabel = toolBlock.name === 'Bash'
+                      ? `Bash: ${((toolBlock.input as Record<string, unknown>)?.command as string)?.slice(0, 40) || '...'}`
+                      : toolBlock.name === 'Read' || toolBlock.name === 'Write' || toolBlock.name === 'Edit'
+                        ? `${toolBlock.name}: ${((toolBlock.input as Record<string, unknown>)?.file_path as string)?.split('/').pop() || '...'}`
+                        : toolBlock.name === 'Grep'
+                          ? `Grep: ${((toolBlock.input as Record<string, unknown>)?.pattern as string)?.slice(0, 30) || '...'}`
+                          : toolBlock.name === 'Glob'
+                            ? `Glob: ${((toolBlock.input as Record<string, unknown>)?.pattern as string)?.slice(0, 30) || '...'}`
+                            : toolBlock.name
+                    parentTask.summary = toolLabel
+                    this.updateToolCall(sessionId, parentTask.toolUseId, {
+                      description: toolLabel,
+                    } as Partial<ClaudeToolCall>)
+                  }
+                }
                 // Track Agent/Task tool calls in activeTasks for stop support
                 // (task_started events may not always be emitted by the SDK)
                 if ((toolBlock.name === 'Agent' || toolBlock.name === 'Task') && !message.parent_tool_use_id) {
@@ -721,6 +762,15 @@ export class ClaudeAgentManager {
                 thinking: event.delta.thinking,
                 parentToolUseId: message.parent_tool_use_id,
               })
+            }
+            // Keep parent active task alive during subagent streaming
+            if (message.parent_tool_use_id && (event.delta?.text || event.delta?.thinking)) {
+              const parentTask = Array.from(session.activeTasks.values())
+                .find(t => t.toolUseId === message.parent_tool_use_id)
+              if (parentTask) {
+                parentTask.lastProgressTime = Date.now()
+                parentTask.stalled = false
+              }
             }
           }
         }
@@ -906,10 +956,21 @@ export class ClaudeAgentManager {
         if (error instanceof Error && error.stack) {
           logger.error('Stack:', error.stack)
         }
-        // Include stderr hint in error message if available
-        const displayMsg = stderrOutput
-          ? `${errMsg}\n${stderrOutput.slice(0, 500)}`
-          : errMsg
+        // Detect node spawn failures and provide helpful guidance
+        const combined = `${errMsg}\n${stderrOutput}`
+        const isNodeError = /ENOENT|spawn.*node|node.*spawn|cannot find.*node|node\.exe.*not found/i.test(combined)
+          || (errMsg.includes('spawn') && getNodeExecutable() === 'node')
+        const displayMsg = isNodeError
+          ? `Node.js not found.\n\nThe Claude Agent SDK requires Node.js to run. Please install it:\n\n` +
+            (process.platform === 'win32'
+              ? `  winget install OpenJS.NodeJS.LTS\n\nor download from https://nodejs.org`
+              : process.platform === 'darwin'
+                ? `  brew install node\n\nor download from https://nodejs.org`
+                : `  Install via your package manager or https://nodejs.org`) +
+            `\n\nRestart Better Agent Terminal after installation.`
+          : stderrOutput
+            ? `${errMsg}\n${stderrOutput.slice(0, 500)}`
+            : errMsg
         this.send('claude:error', sessionId, displayMsg)
       }
     } finally {

@@ -12,7 +12,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 
-const HOME = process.env.HOME || ''
+const HOME = process.env.HOME || process.env.USERPROFILE || ''
 
 interface NodeCandidate {
   type: 'versioned'
@@ -46,10 +46,17 @@ function getCandidates(): Candidate[] {
     ]
   } else {
     // Windows
+    const LOCALAPPDATA = process.env.LOCALAPPDATA || path.join(HOME, 'AppData', 'Local')
     return [
       { type: 'versioned', dir: path.join(HOME, 'AppData', 'Roaming', 'nvm'), binSubpath: 'node.exe' },
       { type: 'direct', path: 'C:\\Program Files\\nodejs\\node.exe' },
       { type: 'direct', path: path.join(HOME, '.volta', 'bin', 'node.exe') },
+      // Claude Code iex installer bundled node
+      { type: 'direct', path: path.join(LOCALAPPDATA, 'Programs', 'claude-code', 'node.exe') },
+      { type: 'direct', path: path.join(HOME, '.claude', 'local', 'node.exe') },
+      // fnm on Windows
+      { type: 'versioned', dir: path.join(LOCALAPPDATA, 'fnm_multishells'), binSubpath: 'node.exe' },
+      { type: 'versioned', dir: path.join(HOME, '.fnm', 'node-versions'), binSubpath: 'installation/node.exe' },
     ]
   }
 }

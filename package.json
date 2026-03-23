@@ -1,6 +1,6 @@
 {
   "name": "better-agent-terminal",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "description": "Windows terminal aggregator with multi-workspace support and Claude Code integration",
   "author": "TonyQ CO., LTD.",
   "main": "dist-electron/main.js",

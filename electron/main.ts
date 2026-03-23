@@ -233,7 +233,7 @@ function createWindow() {
     frame: true,
     titleBarStyle: 'default',
     title: 'Better Agent Terminal',
-    icon: path.join(__dirname, process.platform === 'win32' ? '../assets/icon.ico' : '../assets/icon.png')
+    icon: nativeImage.createFromPath(path.join(__dirname, process.platform === 'win32' ? '../assets/icon.ico' : '../assets/icon.png'))
   })
 
   if (process.platform === 'darwin') {
@@ -1087,7 +1087,7 @@ function registerLocalHandlers() {
     const detachedWin = new BrowserWindow({
       width: 900, height: 700, minWidth: 600, minHeight: 400,
       webPreferences: { preload: path.join(__dirname, 'preload.js'), nodeIntegration: false, contextIsolation: true },
-      frame: true, titleBarStyle: 'default', icon: path.join(__dirname, '../assets/icon.ico')
+      frame: true, titleBarStyle: 'default', icon: nativeImage.createFromPath(path.join(__dirname, process.platform === 'win32' ? '../assets/icon.ico' : '../assets/icon.png'))
     })
     setupResizeThrottle(detachedWin, 'detached')
     detachedWindows.set(workspaceId, detachedWin)

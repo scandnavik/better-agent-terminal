@@ -80,7 +80,7 @@ export default function App() {
 
   // Sync window title with active profile
   useEffect(() => {
-    document.title = `Better Terminal - ${activeProfileName}`
+    document.title = `Better Agent Terminal - ${activeProfileName}`
   }, [activeProfileName])
 
   // Lazy mount: only render a workspace's terminals once it has been activated

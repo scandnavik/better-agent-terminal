@@ -411,13 +411,20 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
           setSubagentStreamingThinking(prev => { const n = new Map(prev); n.delete(message.parentToolUseId!); return n })
           return
         }
-        // Deduplicate by id; attach streaming thinking if backend didn't provide it
+        // Deduplicate by id; for user messages also dedup by content+timestamp proximity
+        // (the sender already adds the message locally, backend broadcasts it for other windows)
         setStreamingThinking(prevThinking => {
           const finalMsg = (!message.thinking && prevThinking && message.role === 'assistant')
             ? { ...message, thinking: prevThinking }
             : message
           setMessages(prev => {
             if (prev.some(m => m.id === finalMsg.id)) return prev
+            // Dedup user messages: if a local user message with same content exists within 5s, skip
+            if (finalMsg.role === 'user' && prev.some(m =>
+              !isToolCall(m) && (m as ClaudeMessage).role === 'user' &&
+              (m as ClaudeMessage).content === finalMsg.content &&
+              Math.abs((m as ClaudeMessage).timestamp - finalMsg.timestamp) < 5000
+            )) return prev
             return [...prev, finalMsg]
           })
           return ''
