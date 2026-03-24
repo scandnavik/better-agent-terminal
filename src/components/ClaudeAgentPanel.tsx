@@ -7,6 +7,20 @@ import { settingsStore } from '../stores/settings-store'
 import { workspaceStore } from '../stores/workspace-store'
 import type { AgentPresetId } from '../types/agent-presets'
 import { LinkedText, FilePreviewModal } from './PathLinker'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+
+// Markdown rendering for completed assistant messages
+// Note: marked.use() modifies the global marked instance (shared with FileTree).
+// Both use the same settings (gfm, breaks, highlight.js, link interception),
+// so sharing is intentional and avoids configuration drift.
+function renderChatMarkdown(text: string): string {
+  const rawHtml = marked.parse(text) as string
+  return DOMPurify.sanitize(rawHtml, {
+    ADD_TAGS: ['input'],
+    ADD_ATTR: ['checked', 'disabled', 'type', 'data-external-link'],
+  })
+}
 
 interface SessionMeta {
   model?: string
@@ -2123,7 +2137,20 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
               </div>
             )
           })()}
-          {msg.content && <div className="claude-markdown"><LinkedText text={msg.content} /></div>}
+          {msg.content && (
+            <div
+              className="claude-markdown"
+              dangerouslySetInnerHTML={{ __html: renderChatMarkdown(msg.content) }}
+              onClick={(e) => {
+                const target = e.target as HTMLElement
+                const link = target.closest('a[data-external-link]') as HTMLAnchorElement | null
+                if (link) {
+                  e.preventDefault()
+                  window.electronAPI.shell.openExternal(link.href)
+                }
+              }}
+            />
+          )}
           {msg.timestamp > 0 && (
             <span className="claude-msg-time" title={formatFullTimestamp(msg.timestamp)}>{formatTimestamp(msg.timestamp)}</span>
           )}

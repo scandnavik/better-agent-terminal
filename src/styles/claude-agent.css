@@ -304,9 +304,37 @@
 }
 
 .claude-markdown {
-  white-space: pre-wrap;
   word-wrap: break-word;
+  line-height: 1.6;
 }
+
+.claude-markdown h1 { font-size: 1.4em; margin: 0.5em 0 0.3em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.2em; }
+.claude-markdown h2 { font-size: 1.2em; margin: 0.5em 0 0.3em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.15em; }
+.claude-markdown h3 { font-size: 1.1em; margin: 0.4em 0 0.2em; }
+.claude-markdown h4, .claude-markdown h5, .claude-markdown h6 { font-size: 1em; margin: 0.4em 0 0.2em; }
+
+.claude-markdown p { margin: 0.3em 0; }
+
+.claude-markdown ul, .claude-markdown ol { margin: 0.3em 0; padding-left: 1.6em; }
+.claude-markdown li { margin: 0.1em 0; }
+
+.claude-markdown table { border-collapse: collapse; margin: 0.4em 0; width: auto; }
+.claude-markdown th, .claude-markdown td { border: 1px solid var(--border-color); padding: 3px 8px; font-size: 0.9em; text-align: left; }
+.claude-markdown th { background: var(--bg-hover); font-weight: 600; }
+
+.claude-markdown code { background: var(--bg-hover); padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.85em; }
+.claude-markdown pre { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px 10px; overflow-x: auto; margin: 0.4em 0; }
+.claude-markdown pre code { background: none; padding: 0; border-radius: 0; font-size: 12px; line-height: 1.5; }
+
+.claude-markdown a { color: var(--accent-color, #d97706); text-decoration: none; }
+.claude-markdown a:hover { text-decoration: underline; }
+
+.claude-markdown blockquote { margin: 0.3em 0; padding: 0.2em 0.8em; border-left: 3px solid var(--border-color); color: var(--text-secondary); }
+.claude-markdown hr { border: none; border-top: 1px solid var(--border-color); margin: 0.6em 0; }
+.claude-markdown img { max-width: 100%; border-radius: 4px; }
+
+.claude-markdown input[type="checkbox"] { margin-right: 6px; pointer-events: none; }
+.claude-markdown del { color: var(--text-secondary); }
 
 .claude-cursor {
   animation: claude-blink 1s step-end infinite;
