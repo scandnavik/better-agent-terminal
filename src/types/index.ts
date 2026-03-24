@@ -226,7 +226,7 @@ export type StatuslineItemId =
   | 'sessionId' | 'tokens' | 'turns' | 'duration'
   | 'contextPct' | 'cost' | 'workspace' | 'gitBranch'
   | 'usage5h' | 'usage5hReset' | 'usage7d' | 'usage7dReset'
-  | 'prompts'
+  | 'maxOut' | 'prompts'
 
 export interface StatuslineItemConfig {
   id: StatuslineItemId
@@ -257,5 +257,6 @@ export const STATUSLINE_ITEMS: StatuslineItemDef[] = [
   { id: 'usage5hReset', label: '5h Reset',     description: '5-hour usage reset countdown',                       defaultVisible: true,  group: 'limits' },
   { id: 'usage7d',      label: '7d Usage',     description: '7-day usage percentage',                             defaultVisible: true,  group: 'limits' },
   { id: 'usage7dReset', label: '7d Reset',     description: '7-day usage reset countdown',                        defaultVisible: true,  group: 'limits' },
+  { id: 'maxOut',        label: 'Max Output',   description: 'Maximum output tokens for current model',            defaultVisible: false, group: 'context' },
   { id: 'prompts',      label: 'Prompts',      description: 'Link to view prompt history',                        defaultVisible: true,  group: 'actions' },
 ]

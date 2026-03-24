@@ -24,8 +24,8 @@ class WorkspaceStore {
   private _usageTimer: ReturnType<typeof setTimeout> | null = null
   private _usagePollingStarted = false
   private _usageInflight = false
-  private _usageBaseInterval = 120 * 1000            // 2 min normal (API has strict rate limits)
-  private _usageCurrentInterval = 120 * 1000
+  private _usageBaseInterval = 5 * 60 * 1000          // 5 min normal (SDK provides rate_limits inline)
+  private _usageCurrentInterval = 5 * 60 * 1000
   private _usageMaxInterval = 30 * 60 * 1000       // 30 min max backoff
   private _usageMinInterval = 60 * 1000             // 1 min min (after activity)
   private _usageRateLimitMin = 120 * 1000           // 2 min min when rate limited
@@ -99,6 +99,12 @@ class WorkspaceStore {
     // Use shorter interval temporarily after activity
     this._usageCurrentInterval = this._usageMinInterval
     this._fetchUsage().then(() => this._scheduleNextPoll())
+  }
+
+  /** Update usage directly from SDK rate_limits (avoids extra API call) */
+  updateUsageFromSDK(data: { fiveHour: number | null; sevenDay: number | null; fiveHourReset: string | null; sevenDayReset: string | null }) {
+    this._claudeUsage = data
+    this.notify()
   }
 
   getState(): AppState {

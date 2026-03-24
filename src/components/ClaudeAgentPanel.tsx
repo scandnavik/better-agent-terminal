@@ -18,6 +18,7 @@ interface SessionMeta {
   durationMs: number
   numTurns: number
   contextWindow: number
+  maxOutputTokens: number
   permissionMode?: string
 }
 
@@ -580,6 +581,12 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
             numTurns: m.numTurns,
             contextWindow: m.contextWindow,
           })
+        }
+        // Update usage from SDK rate_limits if included
+        const rateLimits = (meta as Record<string, unknown>).rateLimits as { fiveHour: number | null; sevenDay: number | null; fiveHourReset: string | null; sevenDayReset: string | null } | undefined
+        if (rateLimits && (rateLimits.fiveHour != null || rateLimits.sevenDay != null)) {
+          workspaceStore.updateUsageFromSDK(rateLimits)
+          setClaudeUsage(rateLimits)
         }
         // Sync UI with backend's current permission mode
         if (m.permissionMode) {
@@ -2846,6 +2853,11 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId }: Read
             if (!claudeUsage?.sevenDayReset) return null
             return <span key="usage7dReset" className="claude-statusline-item">↻{fmtRemaining(new Date(claudeUsage.sevenDayReset))}</span>
           },
+          maxOut: () => !sessionMeta || !sessionMeta.maxOutputTokens ? null : (
+            <span key="maxOut" className="claude-statusline-item" title={`Max output: ${sessionMeta.maxOutputTokens.toLocaleString()} tokens`}>
+              maxOut:{(sessionMeta.maxOutputTokens / 1000).toFixed(0)}k
+            </span>
+          ),
           prompts: () => (
             <span key="prompts" className="claude-statusline-item claude-statusline-clickable"
               onClick={() => setShowPromptHistory(true)} title={t('claude.viewPromptHistory')}>{t('claude.prompts')}</span>

@@ -26,7 +26,7 @@ const defaultSettings: AppSettings = {
   defaultTerminalCount: 1,
   createDefaultAgentTerminal: true,
   allowBypassPermissions: true,
-  enable1MContext: false
+  enable1MContext: true
 }
 
 class SettingsStore {

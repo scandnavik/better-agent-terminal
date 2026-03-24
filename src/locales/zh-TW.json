@@ -37,6 +37,8 @@
     "autoRunAgentCommandHint": "建立 Agent 終端時自動執行 Agent 指令（例如 `claude`）。",
     "allowBypassPermissions": "允許跳過權限確認",
     "allowBypassPermissionsHint": "啟用後，在 Claude Agent 面板中切換至 bypassPermissions 模式時不會顯示確認對話框。請謹慎使用。",
+    "enable1MContext": "啟用 1M token 上下文視窗",
+    "enable1MContextHint": "對支援的模型（Opus 4.6、Sonnet 4.6）使用擴展的 1M token 上下文視窗。停用則使用預設的 200K 上下文。",
     "notifications": "通知",
     "showDockBadge": "Dock 圖示顯示待處理數量",
     "showDockBadgeHint": "有待處理的動作（權限請求、使用者問題）時，在 Dock 圖示上顯示數字徽章。",

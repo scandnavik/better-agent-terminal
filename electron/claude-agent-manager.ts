@@ -91,6 +91,7 @@ interface SessionMetadata {
   durationMs: number
   numTurns: number
   contextWindow: number
+  maxOutputTokens: number
 }
 
 interface PendingRequest {
@@ -108,6 +109,7 @@ interface ActiveTask {
   summary?: string
   lastProgressTime: number
   stalled?: boolean
+  lastToolName?: string
 }
 
 interface SessionInstance {
@@ -291,6 +293,7 @@ export class ClaudeAgentManager {
           durationMs: 0,
           numTurns: 0,
           contextWindow: 0,
+          maxOutputTokens: 0,
         },
         pendingPermissions: new Map(),
         pendingAskUser: new Map(),
@@ -850,9 +853,14 @@ export class ClaudeAgentManager {
                 task.lastProgressTime = Date.now()
                 task.summary = agentMsg.description || agentMsg.summary
                 task.stalled = false
+                if (agentMsg.last_tool_name) {
+                  task.lastToolName = agentMsg.last_tool_name
+                }
                 if (task.toolUseId) {
+                  const desc = agentMsg.description || task.description
+                  const toolSuffix = task.lastToolName ? ` [${task.lastToolName}]` : ''
                   this.updateToolCall(sessionId, task.toolUseId, {
-                    description: agentMsg.description || task.description,
+                    description: desc + toolSuffix,
                   } as Partial<ClaudeToolCall>)
                 }
               }
@@ -880,6 +888,10 @@ export class ClaudeAgentManager {
             result?: string
             errors?: string[]
             modelUsage?: Record<string, { contextWindow?: number; inputTokens?: number; outputTokens?: number; cacheReadInputTokens?: number; cacheCreationInputTokens?: number; maxOutputTokens?: number }>
+            rate_limits?: {
+              five_hour?: { utilization?: number; resets_at?: string }
+              seven_day?: { utilization?: number; resets_at?: string }
+            }
           }
 
           // Log raw result for debugging context window issues
@@ -909,6 +921,9 @@ export class ClaudeAgentManager {
               if (stats.contextWindow) {
                 session.metadata.contextWindow = stats.contextWindow
               }
+              if ((modelStats as { maxOutputTokens?: number }).maxOutputTokens) {
+                session.metadata.maxOutputTokens = (modelStats as { maxOutputTokens?: number }).maxOutputTokens!
+              }
             }
             const summary = `[Claude ctx] prev: input=${session.metadata.inputTokens}, output=${session.metadata.outputTokens} | new: input=${totalInput}, output=${totalOutput} | cost=${resultMsg.total_cost_usd}`
             logger.log(summary)
@@ -925,7 +940,18 @@ export class ClaudeAgentManager {
             session.metadata.outputTokens = usageFull.output_tokens || 0
           }
 
-          this.send('claude:status', sessionId, { ...session.metadata })
+          // Include rate_limits from SDK result if available
+          const statusPayload: Record<string, unknown> = { ...session.metadata }
+          if (resultMsg.rate_limits) {
+            logger.log(`[Claude rate_limits] 5h=${resultMsg.rate_limits.five_hour?.utilization}% reset=${resultMsg.rate_limits.five_hour?.resets_at} 7d=${resultMsg.rate_limits.seven_day?.utilization}% reset=${resultMsg.rate_limits.seven_day?.resets_at}`)
+            statusPayload.rateLimits = {
+              fiveHour: resultMsg.rate_limits.five_hour?.utilization ?? null,
+              sevenDay: resultMsg.rate_limits.seven_day?.utilization ?? null,
+              fiveHourReset: resultMsg.rate_limits.five_hour?.resets_at ?? null,
+              sevenDayReset: resultMsg.rate_limits.seven_day?.resets_at ?? null,
+            }
+          }
+          this.send('claude:status', sessionId, statusPayload)
 
           this.send('claude:result', sessionId, {
             subtype: resultMsg.subtype,

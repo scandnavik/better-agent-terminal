@@ -37,6 +37,8 @@
     "autoRunAgentCommandHint": "Automatically execute the agent command (e.g., `claude`) when creating an Agent Terminal.",
     "allowBypassPermissions": "Allow bypass permissions without confirmation",
     "allowBypassPermissionsHint": "When enabled, switching to bypassPermissions mode in Claude Agent Panel will not show a confirmation dialog. Use with caution.",
+    "enable1MContext": "Enable 1M token context window",
+    "enable1MContextHint": "Use the extended 1M token context window for supported models (Opus 4.6, Sonnet 4.6). Disable to use the default 200K context.",
     "notifications": "Notifications",
     "showDockBadge": "Show pending count on Dock icon",
     "showDockBadgeHint": "Display a badge number on the Dock icon when workspaces have pending actions (permission requests, user questions).",
