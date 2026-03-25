@@ -41,12 +41,11 @@ class WorkspaceStore {
       if (!u) return
 
       // Handle rate-limit response from main process
+      // Use server's retryAfterSec directly — do not double existing interval,
+      // since OAuth always rate-limits on Windows and exponential backoff causes 1.5h+ staleness
       if ('rateLimited' in u && (u as any).rateLimited) {
         const retryAfterMs = ((u as any).retryAfterSec || 60) * 1000
-        this._usageCurrentInterval = Math.min(
-          Math.max(retryAfterMs, this._usageCurrentInterval * 2),
-          this._usageMaxInterval
-        )
+        this._usageCurrentInterval = Math.min(retryAfterMs, this._usageMaxInterval)
         return
       }
 
