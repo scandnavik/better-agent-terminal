@@ -99,6 +99,8 @@
     "workspaces": "工作區",
     "all": "全部",
     "addWorkspace": "+ 新增工作區",
+    "openExisting": "開啟既有目錄",
+    "createNewFolder": "建立新目錄",
     "profiles": "設定檔",
     "settings": "設定",
     "connectedToRemote": "已連線至遠端主機",

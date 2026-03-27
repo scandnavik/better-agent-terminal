@@ -216,12 +216,17 @@
   border-top: 1px solid var(--border-color);
 }
 
+.add-workspace-group {
+  display: flex;
+  gap: 0;
+}
+
 .add-workspace-btn {
-  width: 100%;
+  flex: 1;
   padding: 8px 12px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 4px 0 0 4px;
   color: var(--text-primary);
   cursor: pointer;
   font-size: 13px;
@@ -229,6 +234,23 @@
 
 .add-workspace-btn:hover {
   background: var(--bg-hover);
+}
+
+.add-workspace-new-btn {
+  padding: 8px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.add-workspace-new-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 /* Main Content */

@@ -17,6 +17,7 @@ interface SidebarProps {
   onSetWorkspaceGroup: (id: string, group: string | undefined) => void
   onSelectWorkspace: (id: string) => void
   onAddWorkspace: () => void
+  onCreateWorkspace: () => void
   onRemoveWorkspace: (id: string) => void
   onRenameWorkspace: (id: string, alias: string) => void
   onReorderWorkspaces: (workspaceIds: string[]) => void
@@ -38,6 +39,7 @@ export function Sidebar({
   onSetWorkspaceGroup,
   onSelectWorkspace,
   onAddWorkspace,
+  onCreateWorkspace,
   onRemoveWorkspace,
   onRenameWorkspace,
   onReorderWorkspaces,
@@ -364,9 +366,14 @@ export function Sidebar({
         )}
       </div>
       <div className="sidebar-footer">
-        <button className="add-workspace-btn" onClick={onAddWorkspace}>
-          {t('sidebar.addWorkspace')}
-        </button>
+        <div className="add-workspace-group">
+          <button className="add-workspace-btn" onClick={onAddWorkspace} title={t('sidebar.openExisting')}>
+            {t('sidebar.addWorkspace')}
+          </button>
+          <button className="add-workspace-new-btn" onClick={onCreateWorkspace} title={t('sidebar.createNewFolder')}>
+            +
+          </button>
+        </div>
         <div className="sidebar-footer-buttons">
           <button className="settings-btn" onClick={onOpenProfiles}>
             {t('sidebar.profiles')}

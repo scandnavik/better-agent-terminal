@@ -402,7 +402,11 @@ export function LinkedText({ text }: LinkedTextProps) {
   const [previewPath, setPreviewPath] = useState<string | null>(null)
 
   const handleClick = useCallback((path: string) => {
-    setPreviewPath(path)
+    if (path.endsWith('.md')) {
+      window.dispatchEvent(new CustomEvent('preview-markdown', { detail: { path } }))
+    } else {
+      setPreviewPath(path)
+    }
   }, [])
 
   const handleUrl = useCallback((url: string, e: React.MouseEvent) => {

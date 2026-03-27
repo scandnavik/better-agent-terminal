@@ -8,6 +8,7 @@ import { WorkspaceView, clearInitializedWorkspaces } from './components/Workspac
 import { SettingsPanel } from './components/SettingsPanel'
 import { SnippetSidebar } from './components/SnippetPanel'
 import { SkillsPanel } from './components/SkillsPanel'
+import { MarkdownPreviewPanel } from './components/MarkdownPreviewPanel'
 import { WorkspaceEnvDialog } from './components/WorkspaceEnvDialog'
 import { ResizeHandle } from './components/ResizeHandle'
 import { ProfilePanel } from './components/ProfilePanel'
@@ -74,6 +75,8 @@ export default function App() {
   const [rightPanelTab, setRightPanelTab] = useState<'snippets' | 'skills'>(() => {
     return (localStorage.getItem('bat-right-panel-tab') as 'snippets' | 'skills') || 'snippets'
   })
+  // Markdown preview in right panel
+  const [previewMarkdownPath, setPreviewMarkdownPath] = useState<string | null>(null)
   // Panel settings for resizable panels
   const [panelSettings, setPanelSettings] = useState<PanelSettings>(loadPanelSettings)
   // Detached workspace support
@@ -155,6 +158,25 @@ export default function App() {
       savePanelSettings(updated)
       return updated
     })
+  }, [])
+
+  // Listen for markdown preview requests from PathLinker
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { path } = (e as CustomEvent).detail as { path: string }
+      setPreviewMarkdownPath(path)
+      // Expand right panel if collapsed
+      setPanelSettings(prev => {
+        if (prev.snippetSidebar.collapsed) {
+          const updated = { ...prev, snippetSidebar: { ...prev.snippetSidebar, collapsed: false } }
+          savePanelSettings(updated)
+          return updated
+        }
+        return prev
+      })
+    }
+    window.addEventListener('preview-markdown', handler)
+    return () => window.removeEventListener('preview-markdown', handler)
   }, [])
 
   useEffect(() => {
@@ -304,6 +326,15 @@ export default function App() {
     }
   }, [])
 
+  const handleCreateWorkspace = useCallback(async () => {
+    const folderPath = await window.electronAPI.dialog.createFolder()
+    if (folderPath) {
+      const name = folderPath.split(/[/\\]/).pop() || 'Workspace'
+      workspaceStore.addWorkspace(name, folderPath)
+      workspaceStore.save()
+    }
+  }, [])
+
   const handleDetachWorkspace = useCallback(async (workspaceId: string) => {
     await window.electronAPI.workspace.detach(workspaceId)
   }, [])
@@ -444,6 +475,7 @@ export default function App() {
         onSetWorkspaceGroup={(id, group) => workspaceStore.setWorkspaceGroup(id, group)}
         onSelectWorkspace={(id) => workspaceStore.setActiveWorkspace(id)}
         onAddWorkspace={handleAddWorkspace}
+        onCreateWorkspace={handleCreateWorkspace}
         onRemoveWorkspace={(id) => {
           workspaceStore.removeWorkspace(id)
           workspaceStore.save()
@@ -517,6 +549,18 @@ export default function App() {
                   {'\u{26A1}'}
                 </button>
               )}
+            </div>
+          )
+        }
+
+        // Markdown preview mode: takes over the entire right panel
+        if (previewMarkdownPath) {
+          return (
+            <div className="right-sidebar-wrapper" style={{ width: `${panelSettings.snippetSidebar.width}px`, minWidth: `${panelSettings.snippetSidebar.width}px`, display: 'flex', flexDirection: 'column' }}>
+              <MarkdownPreviewPanel
+                filePath={previewMarkdownPath}
+                onClose={() => setPreviewMarkdownPath(null)}
+              />
             </div>
           )
         }

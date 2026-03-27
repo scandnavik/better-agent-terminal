@@ -212,7 +212,7 @@ async function renderMermaidBlocks(container: HTMLElement) {
   }
 }
 
-function MarkdownPreview({ content }: { content: string }) {
+export function MarkdownPreview({ content }: { content: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const html = renderMarkdown(content)
 

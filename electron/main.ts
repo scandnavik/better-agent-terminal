@@ -956,6 +956,22 @@ function registerLocalHandlers() {
     return result.canceled ? null : result.filePaths[0]
   })
 
+  ipcMain.handle('dialog:create-folder', async () => {
+    const result = await dialog.showSaveDialog(mainWindow!, {
+      defaultPath: app.getPath('home'),
+      title: 'Create New Workspace Folder',
+      buttonLabel: 'Create',
+      properties: ['createDirectory', 'showOverwriteConfirmation'],
+    })
+    if (result.canceled || !result.filePath) return null
+    const folderPath = result.filePath
+    const fs = await import('fs')
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true })
+    }
+    return folderPath
+  })
+
   ipcMain.handle('dialog:select-images', async () => {
     const result = await dialog.showOpenDialog(mainWindow!, {
       defaultPath: app.getPath('home'),

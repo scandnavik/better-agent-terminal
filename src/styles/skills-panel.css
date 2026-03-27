@@ -194,3 +194,73 @@
   color: var(--text-secondary, #888);
   font-size: 12px;
 }
+
+/* Markdown Preview Panel */
+.md-preview-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.md-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-color, #333);
+  flex-shrink: 0;
+  background: var(--bg-secondary, #1e1e1e);
+}
+
+.md-preview-filename {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #ccc);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.md-preview-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.md-preview-action-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #888);
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.md-preview-action-btn:hover {
+  background: var(--bg-hover, #333);
+  color: var(--text-primary, #ccc);
+}
+
+.md-preview-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.md-preview-content .file-preview-markdown {
+  font-size: 13px;
+}
+
+.md-preview-error {
+  padding: 12px;
+  color: #f85149;
+  font-size: 12px;
+}

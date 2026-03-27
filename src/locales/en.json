@@ -99,6 +99,8 @@
     "workspaces": "Workspaces",
     "all": "All",
     "addWorkspace": "+ Add Workspace",
+    "openExisting": "Open existing folder",
+    "createNewFolder": "Create new folder",
     "profiles": "Profiles",
     "settings": "Settings",
     "connectedToRemote": "Connected to remote host",
