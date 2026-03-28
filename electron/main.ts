@@ -805,6 +805,14 @@ function registerProxiedHandlers() {
   const SESSION_KEY_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
   const ORG_ID_CACHE_TTL = 30 * 60 * 1000    // 30 minutes (re-detect after account switch)
 
+  function clearSessionKeyCache() {
+    _cachedSessionKey = null
+    _cachedOrgId = null
+    _cachedCfClearance = null
+    _sessionKeyCacheTime = 0
+    _orgIdCacheTime = 0
+  }
+
   async function getOAuthToken(): Promise<string | null> {
     const now = Date.now()
     if (_cachedOAuthToken && now - _tokenCacheTime < TOKEN_CACHE_TTL) {
@@ -982,11 +990,7 @@ function registerProxiedHandlers() {
     })
 
     if (res.status === 401 || res.status === 403) {
-      _cachedSessionKey = null
-      _cachedOrgId = null
-      _cachedCfClearance = null
-      _sessionKeyCacheTime = 0
-      _orgIdCacheTime = 0
+      clearSessionKeyCache()
       logger.log('[usage] Session key expired or blocked, will re-extract')
       return null
     }
@@ -999,12 +1003,8 @@ function registerProxiedHandlers() {
     // (wrong org) — clear caches so next poll re-extracts fresh from Chrome,
     // then return null to fall back to OAuth which has correct data
     if (data.five_hour?.resets_at == null && data.seven_day?.resets_at == null) {
-      logger.log('[usage] [session-key] Both resets_at are null — session likely stale or wrong account, clearing cache')
-      _cachedSessionKey = null
-      _cachedOrgId = null
-      _cachedCfClearance = null
-      _sessionKeyCacheTime = 0
-      _orgIdCacheTime = 0
+      clearSessionKeyCache()
+      logger.log('[usage] [session-key] Stale/wrong-account session detected, clearing cache')
       return null
     }
 
@@ -1504,10 +1504,14 @@ function registerLocalHandlers() {
     if (wsIndex === -1) return false
     const [workspace] = srcWorkspaces.splice(wsIndex, 1)
 
-    // Move associated terminals
-    const srcTerminals = sourceEntry.terminals as any[]
-    const movedTerminals = srcTerminals.filter((t: any) => t.workspaceId === workspaceId)
-    sourceEntry.terminals = srcTerminals.filter((t: any) => t.workspaceId !== workspaceId)
+    // Move associated terminals (single pass)
+    const movedTerminals: any[] = []
+    const remainingTerminals: any[] = []
+    for (const t of sourceEntry.terminals as any[]) {
+      if (t.workspaceId === workspaceId) movedTerminals.push(t)
+      else remainingTerminals.push(t)
+    }
+    sourceEntry.terminals = remainingTerminals
 
     // Insert workspace at target position
     const tgtWorkspaces = targetEntry.workspaces as any[]

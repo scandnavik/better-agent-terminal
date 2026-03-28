@@ -175,6 +175,18 @@ export function Sidebar({
     }
   }, [handleGroupEditSubmit])
 
+  // Parse cross-window workspace move data from a DragEvent
+  const parseCrossWindowDrop = useCallback((dataTransfer: DataTransfer): { workspaceId: string; sourceWindowId: string } | null => {
+    if (!windowId) return null
+    const raw = dataTransfer.getData('application/x-bat-workspace-move')
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw)
+      if (parsed.sourceWindowId && parsed.sourceWindowId !== windowId) return parsed
+    } catch { /* ignore */ }
+    return null
+  }, [windowId])
+
   // Drag and drop handlers
   const handleDragStart = useCallback((e: React.DragEvent, workspaceId: string) => {
     setDraggedId(workspaceId)
@@ -226,23 +238,18 @@ export function Sidebar({
     e.preventDefault()
 
     // Check for cross-window drop
-    const moveData = e.dataTransfer.getData('application/x-bat-workspace-move')
-    if (moveData && windowId) {
-      try {
-        const { workspaceId: dragWorkspaceId, sourceWindowId } = JSON.parse(moveData)
-        if (sourceWindowId && sourceWindowId !== windowId) {
-          e.stopPropagation() // prevent container onDrop from firing a second moveToWindow
-          const targetIndex = workspaces.findIndex(w => w.id === targetId)
-          const insertIndex = dragPosition === 'after' ? targetIndex + 1 : targetIndex
-          window.electronAPI.workspace.moveToWindow(
-            sourceWindowId, windowId, dragWorkspaceId, Math.max(0, insertIndex)
-          )
-          setDraggedId(null)
-          setDragOverId(null)
-          setDragPosition(null)
-          return
-        }
-      } catch { /* ignore parse errors */ }
+    const crossWindow = parseCrossWindowDrop(e.dataTransfer)
+    if (crossWindow) {
+      e.stopPropagation() // prevent container onDrop from firing a second moveToWindow
+      const targetIndex = workspaces.findIndex(w => w.id === targetId)
+      const insertIndex = dragPosition === 'after' ? targetIndex + 1 : targetIndex
+      window.electronAPI.workspace.moveToWindow(
+        crossWindow.sourceWindowId, windowId!, crossWindow.workspaceId, Math.max(0, insertIndex)
+      )
+      setDraggedId(null)
+      setDragOverId(null)
+      setDragPosition(null)
+      return
     }
 
     if (!draggedId || draggedId === targetId) {
@@ -275,7 +282,7 @@ export function Sidebar({
     setDraggedId(null)
     setDragOverId(null)
     setDragPosition(null)
-  }, [draggedId, dragPosition, workspaces, onReorderWorkspaces, windowId])
+  }, [draggedId, dragPosition, workspaces, onReorderWorkspaces, windowId, parseCrossWindowDrop])
 
   return (
     <aside className="sidebar" style={{ width }}>
@@ -345,20 +352,15 @@ export function Sidebar({
           setExternalDragOver(false)
           if (draggedId) return
           // Cross-window drop on container (append at end)
-          const moveData = e.dataTransfer.getData('application/x-bat-workspace-move')
-          if (moveData && windowId) {
-            try {
-              const { workspaceId, sourceWindowId } = JSON.parse(moveData)
-              if (sourceWindowId && sourceWindowId !== windowId) {
-                e.preventDefault()
-                window.electronAPI.workspace.moveToWindow(
-                  sourceWindowId, windowId, workspaceId, workspaces.length
-                )
-                setDragOverId(null)
-                setDragPosition(null)
-                return
-              }
-            } catch { /* ignore */ }
+          const crossWindow = parseCrossWindowDrop(e.dataTransfer)
+          if (crossWindow) {
+            e.preventDefault()
+            window.electronAPI.workspace.moveToWindow(
+              crossWindow.sourceWindowId, windowId!, crossWindow.workspaceId, workspaces.length
+            )
+            setDragOverId(null)
+            setDragPosition(null)
+            return
           }
           e.preventDefault()
           const files = Array.from(e.dataTransfer.files)
