@@ -994,6 +994,14 @@ function registerProxiedHandlers() {
 
     const data = await res.json()
     logger.log('[usage] [session-key] 5h=', data.five_hour?.utilization, 'reset=', data.five_hour?.resets_at, '7d=', data.seven_day?.utilization, 'reset=', data.seven_day?.resets_at)
+
+    // If both reset times are null the session belongs to a different account
+    // (wrong org) — return null to fall back to OAuth which has correct data
+    if (data.five_hour?.resets_at == null && data.seven_day?.resets_at == null) {
+      logger.log('[usage] [session-key] Both resets_at are null — session likely stale or wrong account, skipping')
+      return null
+    }
+
     return {
       fiveHour: data.five_hour?.utilization ?? null,
       sevenDay: data.seven_day?.utilization ?? null,
