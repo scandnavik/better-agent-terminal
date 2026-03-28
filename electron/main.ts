@@ -332,6 +332,21 @@ function createWindow(windowId: string, bounds?: { x: number; y: number; width: 
         return
       }
 
+      // No workspaces — silently remove from profile without asking
+      if (!entry.workspaces || entry.workspaces.length === 0) {
+        const profileId = entry.profileId!
+        await windowRegistry.removeEntry(windowId)
+        await profileManager.save(profileId).catch(() => { /* ignore */ })
+        const remaining = (await windowRegistry.readAll()).filter(e =>
+          e.profileId === profileId && windowMap.has(e.id) && e.id !== windowId
+        )
+        if (remaining.length === 0) {
+          await profileManager.deactivateProfile(profileId)
+        }
+        win.destroy()
+        return
+      }
+
       // Multiple windows — ask user
       const { response } = await dialog.showMessageBox(win, {
         type: 'question',
