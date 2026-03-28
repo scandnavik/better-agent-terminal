@@ -319,11 +319,31 @@ app.whenReady().then(async () => {
     currentWindowId = entry.id
     logger.log(`[startup] profile launch → window ${currentWindowId}`)
   } else {
-    // Primary launch: use most recently active window entry
-    if (entries.length > 0) {
-      const sorted = [...entries].sort((a, b) => b.lastActiveAt - a.lastActiveAt)
+    // Primary launch: restore all windows from registry
+    // Filter out empty orphan entries, keep entries with workspaces
+    const validEntries = entries.filter(e => (e.workspaces as unknown[]).length > 0)
+    // Clean up orphans
+    const orphans = entries.filter(e => (e.workspaces as unknown[]).length === 0)
+    for (const orphan of orphans) {
+      logger.log(`[startup] removing orphan window ${orphan.id}`)
+      windowRegistry.removeEntry(orphan.id)
+    }
+
+    if (validEntries.length > 0) {
+      // This process takes the most recently active entry
+      const sorted = [...validEntries].sort((a, b) => b.lastActiveAt - a.lastActiveAt)
       currentWindowId = sorted[0].id
-      logger.log(`[startup] restored window ${currentWindowId} (${entries.length} entries)`)
+      logger.log(`[startup] restored window ${currentWindowId} (${validEntries.length} windows)`)
+
+      // Spawn separate processes for remaining windows
+      if (sorted.length > 1) {
+        const { spawn } = await import('child_process')
+        for (let i = 1; i < sorted.length; i++) {
+          const args = [app.getAppPath(), `--window=${sorted[i].id}`]
+          logger.log(`[startup] spawning window ${sorted[i].id}`)
+          spawn(process.execPath, args, { detached: true, stdio: 'ignore' }).unref()
+        }
+      }
     } else {
       const entry = await windowRegistry.createEntry()
       currentWindowId = entry.id

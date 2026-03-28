@@ -34,7 +34,6 @@ export function ProfilePanel({ onClose, onSwitchNewWindow }: ProfilePanelProps) 
   const [editRemotePort, setEditRemotePort] = useState('')
   const [editRemoteToken, setEditRemoteToken] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
-  const [confirmSwitch, setConfirmSwitch] = useState<string | null>(null)
   const [testingId, setTestingId] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<Record<string, 'ok' | 'fail' | 'testing'>>({})
   const createInputRef = useRef<HTMLInputElement>(null)
@@ -71,13 +70,12 @@ export function ProfilePanel({ onClose, onSwitchNewWindow }: ProfilePanelProps) 
         else if (editingId) { setEditingId(null); setEditValue('') }
         else if (editingRemoteId) { setEditingRemoteId(null) }
         else if (confirmDelete) { setConfirmDelete(null) }
-        else if (confirmSwitch) { setConfirmSwitch(null) }
         else onClose()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [creating, editingId, confirmDelete, confirmSwitch, onClose])
+  }, [creating, editingId, confirmDelete, onClose])
 
   const handleCreate = async () => {
     const trimmed = newName.trim()
@@ -168,16 +166,7 @@ export function ProfilePanel({ onClose, onSwitchNewWindow }: ProfilePanelProps) 
 
   const handleSwitchRequest = (profileId: string) => {
     if (profileId === activeProfileId) return
-    setConfirmSwitch(profileId)
-  }
-
-  const handleSwitchConfirm = async (saveFirst: boolean) => {
-    if (!confirmSwitch) return
-    if (saveFirst) {
-      await window.electronAPI.profile.save(activeProfileId)
-    }
-    setConfirmSwitch(null)
-    onSwitchNewWindow(confirmSwitch)
+    onSwitchNewWindow(profileId)
   }
 
   const formatDate = (ts: number) => {
@@ -416,22 +405,6 @@ export function ProfilePanel({ onClose, onSwitchNewWindow }: ProfilePanelProps) 
         </div>
       )}
 
-      {/* Confirm switch dialog — always opens new window */}
-      {confirmSwitch && (
-        <div className="settings-overlay" style={{ zIndex: 1001 }} onClick={() => setConfirmSwitch(null)}>
-          <div className="settings-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, padding: 20 }}>
-            <h3 style={{ margin: '0 0 12px' }}>{t('profiles.switchProfile')}</h3>
-            <p style={{ margin: '0 0 16px', color: '#aaa' }}>
-              {t('profiles.openInNewWindow')}
-            </p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              <button className="profile-action-btn" onClick={() => setConfirmSwitch(null)}>{t('common.cancel')}</button>
-              <button className="profile-action-btn" onClick={() => handleSwitchConfirm(true)}>{t('profiles.saveAndOpen')}</button>
-              <button className="profile-action-btn primary" onClick={() => handleSwitchConfirm(false)}>{t('profiles.newWindow')}</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
