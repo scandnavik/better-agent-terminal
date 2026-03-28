@@ -15,6 +15,45 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+.msg-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.msg-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.msg-filter-btn:hover {
+  opacity: 0.7;
+}
+
+.msg-filter-btn.active {
+  opacity: 1;
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.msg-filter-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .main-panel-title {
   font-size: 13px;
   font-weight: 500;

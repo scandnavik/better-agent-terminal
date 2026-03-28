@@ -26,6 +26,10 @@ export const MainPanel = memo(function MainPanel({ terminal, isActive, onClose, 
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(terminal.title)
   const [showPromptBox, setShowPromptBox] = useState(false)
+  const [showUserMsg, setShowUserMsg] = useState(true)
+  const [showAssistantMsg, setShowAssistantMsg] = useState(true)
+  const [showToolMsg, setShowToolMsg] = useState(true)
+  const [showThinkingMsg, setShowThinkingMsg] = useState(true)
 
   const handleDoubleClick = () => {
     setEditValue(terminal.title)
@@ -71,6 +75,42 @@ export const MainPanel = memo(function MainPanel({ terminal, isActive, onClose, 
             <span>{terminal.title}</span>
           )}
         </div>
+        {isClaudeCode && (
+          <div className="msg-filter-bar">
+            <button
+              className={`msg-filter-btn${showUserMsg ? ' active' : ''}`}
+              onClick={() => setShowUserMsg(v => !v)}
+              title={showUserMsg ? t('claude.hideUserMessages') : t('claude.showUserMessages')}
+            >
+              <span className="msg-filter-dot" style={{ background: 'var(--accent-color)' }} />
+              You
+            </button>
+            <button
+              className={`msg-filter-btn${showAssistantMsg ? ' active' : ''}`}
+              onClick={() => setShowAssistantMsg(v => !v)}
+              title={showAssistantMsg ? t('claude.hideAssistantMessages') : t('claude.showAssistantMessages')}
+            >
+              <span className="msg-filter-dot" style={{ background: 'var(--text-secondary)' }} />
+              Message
+            </button>
+            <button
+              className={`msg-filter-btn${showToolMsg ? ' active' : ''}`}
+              onClick={() => setShowToolMsg(v => !v)}
+              title={showToolMsg ? t('claude.hideToolMessages') : t('claude.showToolMessages')}
+            >
+              <span className="msg-filter-dot" style={{ background: '#10b981' }} />
+              Tool
+            </button>
+            <button
+              className={`msg-filter-btn${showThinkingMsg ? ' active' : ''}`}
+              onClick={() => setShowThinkingMsg(v => !v)}
+              title={showThinkingMsg ? t('claude.hideThinkingMessages') : t('claude.showThinkingMessages')}
+            >
+              <span className="msg-filter-dot" style={{ background: 'var(--claude-accent)' }} />
+              Thinking
+            </button>
+          </div>
+        )}
         <div className="main-panel-actions">
           <ActivityIndicator
             terminalId={terminal.id}
@@ -109,6 +149,10 @@ export const MainPanel = memo(function MainPanel({ terminal, isActive, onClose, 
               cwd={terminal.cwd}
               isActive={isActive}
               workspaceId={workspaceId}
+              showUserMsg={showUserMsg}
+              showAssistantMsg={showAssistantMsg}
+              showToolMsg={showToolMsg}
+              showThinkingMsg={showThinkingMsg}
             />
           </Suspense>
         ) : (
