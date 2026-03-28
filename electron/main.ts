@@ -804,6 +804,12 @@ function registerProxiedHandlers() {
   const TOKEN_CACHE_TTL = 10 * 60 * 1000     // 10 minutes
   const SESSION_KEY_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
   const ORG_ID_CACHE_TTL = 30 * 60 * 1000    // 30 minutes (re-detect after account switch)
+  // Firefox-specific: cached cookie path + EBUSY stale-cache state
+  let _firefoxCookiePath: string | null = null
+  let _firefoxCookiePathCacheTime = 0
+  const FIREFOX_PATH_CACHE_TTL = 60 * 60 * 1000 // 1 hour (profile path rarely changes)
+  let _firefoxEbusyUntil = 0                    // epoch ms — skip re-read until then
+  const FIREFOX_EBUSY_TTL = 10 * 60 * 1000      // 10 min backoff when Firefox is running
 
   function clearSessionKeyCache() {
     _cachedSessionKey = null
@@ -859,37 +865,118 @@ function registerProxiedHandlers() {
     } catch { return null }
   }
 
-  /** Extract session key and cf_clearance from Firefox cookies on macOS (plaintext, no decryption needed) */
+  /** Resolve Firefox profiles base directory for the current platform */
+  function getFirefoxProfilesBase(): string[] {
+    const home = app.getPath('home')
+    if (process.platform === 'darwin') {
+      return [path.join(home, 'Library/Application Support/Firefox')]
+    }
+    if (process.platform === 'win32') {
+      const appdata = process.env.APPDATA ?? path.join(home, 'AppData', 'Roaming')
+      return [path.join(appdata, 'Mozilla', 'Firefox')]
+    }
+    // Linux: standard + Snap + Flatpak
+    return [
+      path.join(home, '.mozilla', 'firefox'),
+      path.join(home, 'snap', 'firefox', 'common', '.mozilla', 'firefox'),
+      path.join(home, '.var', 'app', 'org.mozilla.firefox', '.mozilla', 'firefox'),
+    ]
+  }
+
+  /** Parse Firefox profiles.ini and return absolute path to cookies.sqlite for the default profile */
+  async function resolveFirefoxCookiePath(): Promise<string | null> {
+    const now = Date.now()
+    if (_firefoxCookiePath && now - _firefoxCookiePathCacheTime < FIREFOX_PATH_CACHE_TTL) {
+      return _firefoxCookiePath
+    }
+    for (const base of getFirefoxProfilesBase()) {
+      const iniPath = path.join(base, 'profiles.ini')
+      let ini: string
+      try { ini = await fs.readFile(iniPath, 'utf-8') } catch { continue }
+
+      // Parse sections
+      type Section = Record<string, string>
+      const sections: Record<string, Section> = {}
+      let current = ''
+      for (const line of ini.split(/\r?\n/)) {
+        const sec = line.match(/^\[(.+)\]$/)
+        if (sec) { current = sec[1]; sections[current] = {}; continue }
+        const kv = line.match(/^([^=]+)=(.*)$/)
+        if (kv && current) sections[current][kv[1].trim()] = kv[2].trim()
+      }
+
+      // [Install*] Default= takes priority (points to the last-used install's profile)
+      let profileRelOrAbs: string | null = null
+      let isRelative = true
+      for (const [name, vals] of Object.entries(sections)) {
+        if (name.startsWith('Install') && vals['Default']) {
+          profileRelOrAbs = vals['Default']
+          isRelative = true // Install section paths are always relative to base
+          break
+        }
+      }
+
+      // Fallback: [Profile*] with Default=1
+      if (!profileRelOrAbs) {
+        for (const [name, vals] of Object.entries(sections)) {
+          if (name.startsWith('Profile') && vals['Default'] === '1') {
+            profileRelOrAbs = vals['Path']
+            isRelative = vals['IsRelative'] !== '0'
+            break
+          }
+        }
+      }
+
+      if (!profileRelOrAbs) continue
+
+      const profileDir = isRelative
+        ? path.join(base, profileRelOrAbs)
+        : profileRelOrAbs
+      const cookiePath = path.join(profileDir, 'cookies.sqlite')
+      try { await fs.access(cookiePath) } catch { continue }
+
+      _firefoxCookiePath = cookiePath
+      _firefoxCookiePathCacheTime = now
+      return cookiePath
+    }
+    return null
+  }
+
+  /** Extract session key and cf_clearance from Firefox cookies (plaintext, no decryption needed) */
   async function getSessionKeyFromFirefox(): Promise<{ sessionKey: string; cfClearance: string | null } | null> {
-    if (process.platform !== 'darwin') return null
     const now = Date.now()
     if (_cachedSessionKey && now - _sessionKeyCacheTime < SESSION_KEY_CACHE_TTL) {
       return { sessionKey: _cachedSessionKey, cfClearance: _cachedCfClearance }
     }
     try {
+      const ffCookiePath = await resolveFirefoxCookiePath()
+      if (!ffCookiePath) return null
+
+      // If Firefox is running and we hit EBUSY recently, return stale cached key
+      if (now < _firefoxEbusyUntil) {
+        if (_cachedSessionKey) {
+          logger.log('[usage] Firefox DB busy, returning stale session key')
+          return { sessionKey: _cachedSessionKey, cfClearance: _cachedCfClearance }
+        }
+        return null
+      }
+
       const os = await import('os')
       const { execSync } = await import('child_process')
-
-      const ffBase = path.join(app.getPath('home'), 'Library/Application Support/Firefox/Profiles')
-      try { await fs.access(ffBase) } catch { return null }
-
-      // Find the default profile (prefer *.default-release, then *.default, then first entry)
-      let profileDir: string | null = null
-      try {
-        const entries = await fs.readdir(ffBase)
-        const chosen = entries.find(e => e.endsWith('.default-release'))
-          ?? entries.find(e => e.endsWith('.default'))
-          ?? entries[0]
-        if (chosen) profileDir = path.join(ffBase, chosen)
-      } catch { return null }
-      if (!profileDir) return null
-
-      const ffCookiePath = path.join(profileDir, 'cookies.sqlite')
-      try { await fs.access(ffCookiePath) } catch { return null }
-
       const tmpDir = os.tmpdir()
       const tmpDb = path.join(tmpDir, 'bat-firefox-cookies.db')
-      await fs.copyFile(ffCookiePath, tmpDb)
+
+      try {
+        await fs.copyFile(ffCookiePath, tmpDb)
+      } catch (e: any) {
+        if (e?.code === 'EBUSY' || e?.code === 'EPERM') {
+          _firefoxEbusyUntil = now + FIREFOX_EBUSY_TTL
+          logger.log('[usage] Firefox DB locked (EBUSY), will retry in 10min')
+          if (_cachedSessionKey) return { sessionKey: _cachedSessionKey, cfClearance: _cachedCfClearance }
+        }
+        return null
+      }
+
       try { await fs.copyFile(ffCookiePath + '-wal', tmpDb + '-wal') } catch { /* ok */ }
       try { await fs.copyFile(ffCookiePath + '-shm', tmpDb + '-shm') } catch { /* ok */ }
 
