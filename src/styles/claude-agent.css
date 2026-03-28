@@ -313,11 +313,13 @@
 .claude-markdown h3 { font-size: 1.1em; margin: 0.4em 0 0.2em; }
 .claude-markdown h4, .claude-markdown h5, .claude-markdown h6 { font-size: 1em; margin: 0.4em 0 0.2em; }
 
-.claude-markdown p { margin: 0.3em 0; }
+.claude-markdown p { margin: 0.3em 0; margin-block: 0.3em; }
 
-.claude-markdown ul, .claude-markdown ol { margin: 0.3em 0; padding-left: 1.6em; }
-.claude-markdown li { margin: 0.1em 0; }
+.claude-markdown ul, .claude-markdown ol { margin: 0.1em 0; margin-block: 0.1em; padding-left: 1.6em; }
+.claude-markdown li { margin: 0; }
 .claude-markdown li > p { margin: 0; }
+.claude-markdown li > ul, .claude-markdown li > ol { margin: 0; margin-block: 0; }
+.claude-markdown p + ul, .claude-markdown p + ol { margin-top: 0; margin-block-start: 0; }
 
 .claude-markdown table { border-collapse: collapse; margin: 0.4em 0; width: auto; }
 .claude-markdown th, .claude-markdown td { border: 1px solid var(--border-color); padding: 3px 8px; font-size: 0.9em; text-align: left; }

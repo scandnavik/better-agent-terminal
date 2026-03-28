@@ -29,7 +29,9 @@ function renderChatMarkdown(text: string): string {
     }
   )
   const rawHtml = marked.parse(processed) as string
-  return DOMPurify.sanitize(rawHtml, {
+  // Remove whitespace between block-level HTML tags to prevent anonymous line boxes
+  const cleanHtml = rawHtml.replace(/>\s+</g, '><')
+  return DOMPurify.sanitize(cleanHtml, {
     ADD_TAGS: ['input'],
     ADD_ATTR: ['checked', 'disabled', 'type', 'data-external-link'],
     ALLOWED_URI_REGEXP: /^(?:https?|mailto|tel|file):/i,
