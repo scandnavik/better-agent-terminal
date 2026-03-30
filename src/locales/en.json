@@ -208,6 +208,14 @@
     "expandSkills": "Expand Skills"
   },
 
+  "agents": {
+    "title": "Agents",
+    "searchAgents": "Search agents...",
+    "waitingForUpdate": "Waiting for session update... Send any message in the Agent chat to load agents.",
+    "noSession": "Start an Agent session to see available agents.",
+    "noMatchingAgents": "No matching agents"
+  },
+
   "about": {
     "title": "About",
     "appName": "Better Agent Terminal",

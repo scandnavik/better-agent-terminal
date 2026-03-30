@@ -1245,6 +1245,17 @@ export class ClaudeAgentManager {
     }
   }
 
+  async getSupportedAgents(sessionId: string): Promise<Array<{ name: string; description: string; model?: string }>> {
+    const session = this.sessions.get(sessionId)
+    if (!session?.queryInstance) return []
+    try {
+      return await session.queryInstance.supportedAgents()
+    } catch (e) {
+      logger.warn('getSupportedAgents failed:', e)
+      return []
+    }
+  }
+
   getSessionMeta(sessionId: string): Record<string, unknown> | null {
     const session = this.sessions.get(sessionId)
     if (!session) return null

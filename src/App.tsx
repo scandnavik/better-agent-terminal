@@ -8,6 +8,7 @@ import { WorkspaceView, clearInitializedWorkspaces } from './components/Workspac
 import { SettingsPanel } from './components/SettingsPanel'
 import { SnippetSidebar } from './components/SnippetPanel'
 import { SkillsPanel } from './components/SkillsPanel'
+import { AgentsPanel } from './components/AgentsPanel'
 import { MarkdownPreviewPanel } from './components/MarkdownPreviewPanel'
 import { WorkspaceEnvDialog } from './components/WorkspaceEnvDialog'
 import { ResizeHandle } from './components/ResizeHandle'
@@ -72,8 +73,8 @@ export default function App() {
   const [envDialogWorkspaceId, setEnvDialogWorkspaceId] = useState<string | null>(null)
   // Right sidebar tabs
   const [showSnippetSidebar] = useState(true)
-  const [rightPanelTab, setRightPanelTab] = useState<'snippets' | 'skills'>(() => {
-    return (localStorage.getItem('bat-right-panel-tab') as 'snippets' | 'skills') || 'snippets'
+  const [rightPanelTab, setRightPanelTab] = useState<'snippets' | 'skills' | 'agents'>(() => {
+    return (localStorage.getItem('bat-right-panel-tab') as 'snippets' | 'skills' | 'agents') || 'snippets'
   })
   // Markdown preview in right panel
   const [previewMarkdownPath, setPreviewMarkdownPath] = useState<string | null>(null)
@@ -130,7 +131,7 @@ export default function App() {
     })
   }, [])
 
-  const handleRightPanelTabChange = useCallback((tab: 'snippets' | 'skills') => {
+  const handleRightPanelTabChange = useCallback((tab: 'snippets' | 'skills' | 'agents') => {
     setRightPanelTab(tab)
     localStorage.setItem('bat-right-panel-tab', tab)
     // If collapsed, expand when switching tabs
@@ -616,9 +617,14 @@ export default function App() {
                 {t('snippets.title')}
               </button>
               {isClaudeCode && (
-                <button className={`right-sidebar-tab${effectiveTab === 'skills' ? ' active' : ''}`} onClick={() => handleRightPanelTabChange('skills')}>
-                  {t('skills.title')}
-                </button>
+                <>
+                  <button className={`right-sidebar-tab${effectiveTab === 'skills' ? ' active' : ''}`} onClick={() => handleRightPanelTabChange('skills')}>
+                    {t('skills.title')}
+                  </button>
+                  <button className={`right-sidebar-tab${effectiveTab === 'agents' ? ' active' : ''}`} onClick={() => handleRightPanelTabChange('agents')}>
+                    {t('agents.title')}
+                  </button>
+                </>
               )}
               <button className="right-sidebar-collapse" onClick={handleSnippetCollapse} title={t('snippets.collapsePanel')}>&raquo;</button>
             </div>
@@ -630,6 +636,11 @@ export default function App() {
                   collapsed={false}
                   onCollapse={handleSnippetCollapse}
                   activeCwd={state.activeWorkspaceId ? state.workspaces.find(w => w.id === state.activeWorkspaceId)?.folderPath ?? null : null}
+                  activeSessionId={state.focusedTerminalId ?? null}
+                />
+              ) : effectiveTab === 'agents' ? (
+                <AgentsPanel
+                  isVisible={true}
                   activeSessionId={state.focusedTerminalId ?? null}
                 />
               ) : (

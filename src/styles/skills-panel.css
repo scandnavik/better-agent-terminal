@@ -188,6 +188,16 @@
   white-space: nowrap;
 }
 
+.agents-model-badge {
+  font-size: 10px;
+  color: var(--text-secondary, #888);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 6px;
+  font-family: monospace;
+}
+
 .skills-empty {
   padding: 16px 8px;
   text-align: center;

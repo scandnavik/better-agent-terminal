@@ -198,6 +198,15 @@
     "noMatchingSkills": "没有匹配的 skills",
     "expandSkills": "展开 Skills"
   },
+
+  "agents": {
+    "title": "Agents",
+    "searchAgents": "搜索 agents...",
+    "waitingForUpdate": "等待 session 更新... 在 Agent 聊天中发送任何消息以加载 agents。",
+    "noSession": "启动 Agent session 以查看可用的 agents。",
+    "noMatchingAgents": "没有匹配的 agents"
+  },
+
   "about": {
     "title": "关于",
     "appName": "Better Agent Terminal",

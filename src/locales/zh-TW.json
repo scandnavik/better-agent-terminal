@@ -208,6 +208,14 @@
     "expandSkills": "展開 Skills"
   },
 
+  "agents": {
+    "title": "Agents",
+    "searchAgents": "搜尋 agents...",
+    "waitingForUpdate": "等待 session 更新... 在 Agent 聊天中傳送任何訊息以載入 agents。",
+    "noSession": "啟動 Agent session 以查看可用的 agents。",
+    "noMatchingAgents": "沒有符合的 agents"
+  },
+
   "about": {
     "title": "關於",
     "appName": "Better Agent Terminal",

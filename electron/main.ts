@@ -722,6 +722,7 @@ function registerProxiedHandlers() {
   registerHandler('claude:get-supported-models', (_ctx, sessionId: string) => claudeManager?.getSupportedModels(sessionId))
   registerHandler('claude:get-account-info', (_ctx, sessionId: string) => claudeManager?.getAccountInfo(sessionId))
   registerHandler('claude:get-supported-commands', (_ctx, sessionId: string) => claudeManager?.getSupportedCommands(sessionId))
+  registerHandler('claude:get-supported-agents', (_ctx, sessionId: string) => claudeManager?.getSupportedAgents(sessionId))
 
   // Scan .claude/commands/ directories for skill files
   registerHandler('claude:scan-skills', async (_ctx, cwd: string) => {
