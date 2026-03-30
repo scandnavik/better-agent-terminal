@@ -1,5 +1,63 @@
 # Release Notes — v2.1.x
 
+## v2.1.5
+
+### Bug Fixes
+- **Model selector**: No longer shows "No models available" — models are now fetched on-demand when the selector opens, without requiring an active session
+- **Model switching**: Switching models no longer clears the message input box (#65)
+
+---
+
+## v2.1.4
+
+### New Features
+
+#### Cross-Window Workspace Drag-and-Drop
+- Drag workspaces between different windows in the sidebar
+- Drop position is respected — inserts at the exact target slot
+- No session rebuild needed — pure registry re-index
+
+#### Firefox Session Key Support
+- Usage polling now supports Firefox cookies as a session key source (Chrome → Firefox → OAuth fallback chain)
+- Cross-platform: macOS, Windows (`%APPDATA%`), Linux (standard + Snap + Flatpak)
+- Reads `profiles.ini` to resolve the correct default profile
+- EBUSY handling: if Firefox is running and DB is locked, returns stale cache for 10 min
+
+#### Usage Polling Improvements
+- Cumulative backoff: `60s × 2^streak` (streak capped at 3 → max 480s) for consecutive rate limits
+- `refreshUsageNow()` is blocked during rate-limit backoff to prevent hammering
+- localStorage cache: usage data persists across app restarts; expired windows are cleared on load
+- Stale indicator: 10 min without fresh data marks the 5h usage as stale (dimmed)
+
+#### 5h Pacing Indicator
+- `usage5h` statusline item now shows ▼ (on pace) or ▲ (over pace) based on utilization vs time elapsed
+- Tooltip shows time elapsed % and estimated minutes to limit
+
+#### Context % Dynamic Color
+- `ctx X%` statusline item now colors dynamically: green (≤50%) / yellow (≥50%) / red (≥80%)
+- User-configured statusline color for `contextPct` is ignored — dynamic color always wins
+
+#### PDF Preview
+- Click `.pdf` file paths in Agent chat to open preview in right sidebar using Chromium's built-in viewer (#60, @handpower)
+
+#### Simplified Chinese Locale
+- Added 简体中文 (Simplified Chinese) language support
+
+#### Multi-Window Enhancements
+- Window index shown in profile badge (e.g. `Default:1`, `Default:2`)
+- Closing an empty-workspace window skips confirmation dialog — removed silently
+- Single instance lock with workspace save-to-snapshot on second launch attempt
+
+### Bug Fixes
+- Fixed stale/wrong-account Chrome session key returning 0% usage after account switch
+- Fixed `getSupportedModels` failing when no active session exists
+- Fixed image resize error (`sharp` module not found in packaged app) — native binaries now unpacked from asar
+- Fixed `sharp` platform-specific deps causing `EBADPLATFORM` on ARM64 CI runners
+- Fixed markdown loose list item extra spacing
+- Fixed cross-window workspace drop inserting at wrong position
+
+---
+
 ## v2.1.3
 
 ### New Features
