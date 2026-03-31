@@ -279,6 +279,7 @@
     "no": "否",
     "tellClaudeInstead": "告訴 Claude 該做什麼",
     "escToCancel": "按 Esc 取消",
+    "model1mHint": "1M context 透過 SDK 的 cache 效率較低。對成本敏感的工作，建議直接使用 Claude Code CLI。",
     "submit": "送出",
     "other": "其他...",
     "optionPreview": "選項預覽",

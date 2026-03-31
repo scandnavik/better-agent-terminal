@@ -2702,6 +2702,9 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId, showUs
               })()}
             </div>
           )}
+          {currentModel?.includes('[1m]') && (
+            <div className="claude-model-1m-hint">{t('claude.model1mHint')}</div>
+          )}
           <div className="claude-permission-hint">{t('claude.escToCancel')}</div>
         </div>
       )}

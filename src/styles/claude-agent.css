@@ -1692,6 +1692,14 @@
   opacity: 0.7;
 }
 
+.claude-model-1m-hint {
+  font-size: 11px;
+  color: #f59e0b;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color);
+  line-height: 1.4;
+}
+
 /* Status Line Bar — attached to input-area when visible, standalone otherwise */
 .claude-statusline-bar {
   flex-shrink: 0;
