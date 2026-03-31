@@ -288,7 +288,8 @@ const electronAPI = {
     toggleFavorite: (id: number) => ipcRenderer.invoke('snippet:toggleFavorite', id),
     search: (query: string) => ipcRenderer.invoke('snippet:search', query),
     getCategories: () => ipcRenderer.invoke('snippet:getCategories'),
-    getFavorites: () => ipcRenderer.invoke('snippet:getFavorites')
+    getFavorites: () => ipcRenderer.invoke('snippet:getFavorites'),
+    getByWorkspace: (workspaceId?: string) => ipcRenderer.invoke('snippet:getByWorkspace', workspaceId)
   }
 }
 
