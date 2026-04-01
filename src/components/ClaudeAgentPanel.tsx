@@ -794,7 +794,7 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId, showUs
       if (savedSdkSessionId) {
         dlog(`${stag} AUTO-RESUME sdkSessionId=${savedSdkSessionId.slice(0, 8)}`)
         historyLoadedRef.current = true
-        window.electronAPI.claude.resumeSession(sessionId, savedSdkSessionId, cwd, savedModel)
+        window.electronAPI.claude.resumeSession(sessionId, savedSdkSessionId, cwd, savedModel, apiVersion)
       } else {
         dlog(`${stag} FRESH startSession`)
         window.electronAPI.claude.startSession(sessionId, { cwd, permissionMode, model: effectiveModel, effort: effectiveEffort as 'low' | 'medium' | 'high' | 'max', apiVersion })
@@ -939,9 +939,10 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId, showUs
     sessionStartedRef.current = false
     // Mark that history will be loaded — prevents sys-init from wiping messages
     historyLoadedRef.current = true
-    await window.electronAPI.claude.resumeSession(sessionId, sdkSessionId, cwd)
+    const apiVersion = isV2Session ? 'v2' as const : 'v1' as const
+    await window.electronAPI.claude.resumeSession(sessionId, sdkSessionId, cwd, undefined, apiVersion)
     workspaceStore.setTerminalSdkSessionId(sessionId, sdkSessionId)
-  }, [sessionId, cwd])
+  }, [sessionId, cwd, isV2Session])
 
   const handleForkSession = useCallback(async () => {
     const dlog = (...args: unknown[]) => window.electronAPI?.debug?.log(...args)

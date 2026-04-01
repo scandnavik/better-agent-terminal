@@ -348,6 +348,10 @@
   flex-direction: row !important;
 }
 
+.form-group-inline input[type="checkbox"] {
+  width: auto;
+}
+
 .form-group-inline label {
   margin-bottom: 0 !important;
 }

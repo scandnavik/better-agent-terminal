@@ -372,11 +372,11 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Star History
 
-<a href="https://star-history.com/#tony1223/better-agent-terminal&Date">
+<a href="https://www.star-history.com/?repos=tony1223%2Fbetter-agent-terminal&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=tony1223/better-agent-terminal&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=tony1223/better-agent-terminal&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=tony1223/better-agent-terminal&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=tony1223/better-agent-terminal&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=tony1223/better-agent-terminal&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=tony1223/better-agent-terminal&type=date&legend=top-left" />
  </picture>
 </a>
 

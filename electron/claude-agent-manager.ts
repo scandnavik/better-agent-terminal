@@ -1180,6 +1180,7 @@ export class ClaudeAgentManager {
           model: effectiveModel,
           permissionMode: sdkMode,
           canUseTool,
+          cwd: session.cwd,
           ...(claudeCodePath ? { pathToClaudeCodeExecutable: claudeCodePath } : {}),
           ...(nodeExecutable !== 'node' || electronFallback ? { executable: nodeExecutable } : {}),
         }
