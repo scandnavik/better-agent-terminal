@@ -1383,7 +1383,9 @@ function registerProxiedHandlers() {
       const { execSync } = await import('child_process')
       execSync('gh --version', { encoding: 'utf-8', timeout: 5000, shell: true })
       try {
-        execSync('gh auth status', { encoding: 'utf-8', timeout: 5000, shell: true, stdio: 'pipe' })
+        // gh auth status exits non-zero if ANY account has issues, even if the active account is fine.
+        // Use gh auth token which only checks the active account and returns 0 if authenticated.
+        execSync('gh auth token', { encoding: 'utf-8', timeout: 5000, shell: true, stdio: 'pipe' })
         return { installed: true, authenticated: true }
       } catch {
         return { installed: true, authenticated: false }
