@@ -933,11 +933,13 @@ export class ClaudeAgentManager {
 
     if (message.type === 'system' && (message as { subtype?: string }).subtype === 'api_retry') {
       const retry = message as { attempt?: number; maxAttempts?: number; delay?: number; status?: number; error?: string }
+      logger.warn(`[api_retry] session=${sessionId.slice(0, 8)} raw=`, JSON.stringify(message))
       const parts = [`API retrying`]
       if (retry.attempt) parts.push(`(attempt ${retry.attempt}${retry.maxAttempts ? `/${retry.maxAttempts}` : ''})`)
       if (retry.delay) parts.push(`${retry.delay}ms`)
       if (retry.status) parts.push(`HTTP ${retry.status}`)
       if (retry.error) parts.push(`- ${retry.error}`)
+      logger.warn(`[api_retry] ${parts.join(' ')}`)
       this.addMessage(sessionId, {
         id: `sys-retry-${Date.now()}`,
         sessionId,
@@ -1221,6 +1223,10 @@ export class ClaudeAgentManager {
           session.v2Session.close()
           session.v2Session = undefined
           break
+        }
+        const msgType = (message as { type?: string; subtype?: string })
+        if (msgType.type === 'system') {
+          logger.log(`[Claude V2] system event: subtype=${msgType.subtype ?? 'none'} raw=`, JSON.stringify(message))
         }
         this.processMessage(sessionId, session, message)
       }
