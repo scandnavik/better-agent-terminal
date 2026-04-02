@@ -19,7 +19,7 @@ const defaultSettings: AppSettings = {
   customForegroundColor: '#dfdbc3',
   customCursorColor: '#dfdbc3',
   globalEnvVars: [],
-  defaultAgent: 'claude-code-v2' as AgentPresetId,
+  defaultAgent: 'claude-code' as AgentPresetId,
   agentAutoCommand: true,
   agentCommandType: 'claude',
   agentCustomCommand: '',
