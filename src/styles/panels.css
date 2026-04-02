@@ -342,6 +342,11 @@
   color: white;
 }
 
+.dialog-btn.confirm.danger ~ .dialog-btn.confirm:not(.danger) {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
 .dialog-btn:hover {
   opacity: 0.9;
 }

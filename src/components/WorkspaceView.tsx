@@ -345,11 +345,14 @@ export function WorkspaceView({ workspace, terminals, focusedTerminalId, isActiv
     }
   }, [terminals])
 
-  const handleConfirmClose = useCallback(() => {
+  const handleConfirmClose = useCallback((cleanWorktree = false) => {
     if (showCloseConfirm) {
       const terminal = terminals.find(t => t.id === showCloseConfirm)
       if (terminal?.agentPreset === 'claude-code' || terminal?.agentPreset === 'claude-code-v2' || terminal?.agentPreset === 'claude-code-worktree') {
         window.electronAPI.claude.stopSession(showCloseConfirm)
+        if (cleanWorktree && terminal?.agentPreset === 'claude-code-worktree') {
+          window.electronAPI.claude.cleanupWorktree(showCloseConfirm, true)
+        }
       } else {
         window.electronAPI.pty.kill(showCloseConfirm)
       }
@@ -531,8 +534,10 @@ export function WorkspaceView({ workspace, terminals, focusedTerminalId, isActiv
 
       {showCloseConfirm && (
         <CloseConfirmDialog
-          onConfirm={handleConfirmClose}
+          onConfirm={() => handleConfirmClose(false)}
           onCancel={() => setShowCloseConfirm(null)}
+          isWorktree={terminals.find(t => t.id === showCloseConfirm)?.agentPreset === 'claude-code-worktree'}
+          onConfirmAndClean={() => handleConfirmClose(true)}
         />
       )}
     </div>
