@@ -699,23 +699,32 @@ class WorkspaceStore {
       try {
         const parsed = JSON.parse(data)
         // Restore terminals with empty runtime fields
-        const terminals: TerminalInstance[] = (parsed.terminals || []).map((t: Partial<TerminalInstance>) => ({
-          id: t.id || '',
-          workspaceId: t.workspaceId || '',
-          type: 'terminal' as const,
-          agentPreset: t.agentPreset,
-          title: t.title || 'Terminal',
-          alias: t.alias,
-          cwd: t.cwd || '',
-          sdkSessionId: t.sdkSessionId,
-          model: t.model,
-          sessionMeta: t.sessionMeta,
-          scrollbackBuffer: [],
-          pid: undefined,
-        }))
+        const workspaces: Workspace[] = parsed.workspaces || []
+        const workspaceMap = new Map(workspaces.map((w: Workspace) => [w.id, w]))
+        const terminals: TerminalInstance[] = (parsed.terminals || []).map((t: Partial<TerminalInstance>) => {
+          const ws = t.workspaceId ? workspaceMap.get(t.workspaceId) : undefined
+          const cwd = t.cwd || ws?.folderPath || ''
+          if (!cwd) {
+            window.electronAPI?.debug?.log?.(`[workspace-store] Warning: terminal ${t.id} has no cwd and no workspace folderPath`)
+          }
+          return {
+            id: t.id || '',
+            workspaceId: t.workspaceId || '',
+            type: 'terminal' as const,
+            agentPreset: t.agentPreset,
+            title: t.title || 'Terminal',
+            alias: t.alias,
+            cwd,
+            sdkSessionId: t.sdkSessionId,
+            model: t.model,
+            sessionMeta: t.sessionMeta,
+            scrollbackBuffer: [],
+            pid: undefined,
+          }
+        })
         this.state = {
           ...this.state,
-          workspaces: parsed.workspaces || [],
+          workspaces,
           activeWorkspaceId: parsed.activeWorkspaceId || null,
           terminals,
           activeTerminalId: parsed.activeTerminalId || null,

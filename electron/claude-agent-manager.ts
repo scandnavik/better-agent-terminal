@@ -295,6 +295,13 @@ export class ClaudeAgentManager {
     }
 
     try {
+      // Validate cwd — must be a non-empty absolute path to prevent sessions running in wrong directory
+      if (!options.cwd || !options.cwd.startsWith('/')) {
+        const errMsg = `[Claude] Cannot start session: invalid cwd "${options.cwd || '(empty)'}". A valid workspace path is required.`
+        logger.log(errMsg)
+        throw new Error(errMsg)
+      }
+
       const abortController = new AbortController()
       const state: ClaudeSessionState = {
         sessionId,
@@ -1187,7 +1194,7 @@ export class ClaudeAgentManager {
 
         // Only resume if the sdkSessionId was created by a V2 session
         const v2ResumeId = session.v2SessionModel ? session.sdkSessionId : undefined
-        logger.log(`[Claude V2] Creating session: model=${v2Options.model}, permissionMode=${v2Options.permissionMode}, resumeId=${v2ResumeId || 'none'}`)
+        logger.log(`[Claude V2] Creating session: model=${v2Options.model}, permissionMode=${v2Options.permissionMode}, cwd=${v2Options.cwd}, resumeId=${v2ResumeId || 'none'}`)
 
         if (v2ResumeId) {
           session.v2Session = resumeSession(v2ResumeId, v2Options)
