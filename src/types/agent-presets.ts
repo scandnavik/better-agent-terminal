@@ -12,7 +12,7 @@ export interface AgentPreset {
   debug?: boolean;   // 僅在 debug 模式下顯示
 }
 
-export type AgentPresetId = 'claude-code' | 'claude-code-v2' | 'claude-code-worktree' | 'gemini-cli' | 'codex-cli' | 'copilot-cli' | 'none';
+export type AgentPresetId = 'claude-code' | 'claude-code-v2' | 'claude-code-worktree' | 'claude-cli' | 'claude-cli-worktree' | 'gemini-cli' | 'codex-cli' | 'copilot-cli' | 'none';
 
 export const AGENT_PRESETS: AgentPreset[] = [
   {
@@ -36,7 +36,19 @@ export const AGENT_PRESETS: AgentPreset[] = [
     debug: true,
   },
   {
-    id: 'gemini-cli', 
+    id: 'claude-cli',
+    name: 'Claude CLI',
+    icon: '▶',
+    color: '#d97706',
+  },
+  {
+    id: 'claude-cli-worktree',
+    name: 'Claude CLI (Worktree)',
+    icon: '🌳',
+    color: '#22c55e',
+  },
+  {
+    id: 'gemini-cli',
     name: 'Gemini CLI', 
     icon: '◇', 
     color: '#4285f4', 

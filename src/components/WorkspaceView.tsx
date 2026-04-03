@@ -216,6 +216,11 @@ export function WorkspaceView({ workspace, terminals, focusedTerminalId, isActiv
         // Claude agent terminals will be started by ClaudeAgentPanel on mount
         for (const terminal of terminals) {
           if (terminal.agentPreset === 'claude-code' || terminal.agentPreset === 'claude-code-v2' || terminal.agentPreset === 'claude-code-worktree') continue
+          // claude-cli presets use startClaudeCliPty for bundled CLI + env setup
+          if (terminal.agentPreset === 'claude-cli' || terminal.agentPreset === 'claude-cli-worktree') {
+            startClaudeCliPty(terminal.id, terminal.cwd || workspace.folderPath, terminal.agentPreset === 'claude-cli-worktree')
+            continue
+          }
           window.electronAPI.pty.create({
             id: terminal.id,
             cwd: terminal.cwd || workspace.folderPath,
@@ -244,7 +249,9 @@ export function WorkspaceView({ workspace, terminals, focusedTerminalId, isActiv
 
         if (createAgentTerminal) {
           const agentTerminal = workspaceStore.addTerminal(workspace.id, defaultAgent as AgentPresetId)
-          if (defaultAgent !== 'claude-code' && defaultAgent !== 'claude-code-v2' && defaultAgent !== 'claude-code-worktree') {
+          if (defaultAgent === 'claude-cli' || defaultAgent === 'claude-cli-worktree') {
+            startClaudeCliPty(agentTerminal.id, workspace.folderPath, defaultAgent === 'claude-cli-worktree')
+          } else if (defaultAgent !== 'claude-code' && defaultAgent !== 'claude-code-v2' && defaultAgent !== 'claude-code-worktree') {
             window.electronAPI.pty.create({
               id: agentTerminal.id,
               cwd: workspace.folderPath,
@@ -330,6 +337,61 @@ export function WorkspaceView({ workspace, terminals, focusedTerminalId, isActiv
     workspaceStore.save()
   }, [workspace.id])
 
+  /** Create a claude-cli PTY terminal with bundled CLI, CLAUDE_CODE_NO_FLICKER, and optional worktree */
+  const startClaudeCliPty = useCallback(async (terminalId: string, cwd: string, isWorktree: boolean) => {
+    const settings = settingsStore.getSettings()
+    const shell = await getShellFromSettings()
+    const customEnv = mergeEnvVars(settings.globalEnvVars, workspace.envVars)
+    const cliPath = await window.electronAPI.claude.getCliPath()
+
+    // Set up worktree if needed
+    let effectiveCwd = cwd
+    if (isWorktree) {
+      const wtResult = await window.electronAPI.worktree.create(terminalId, cwd)
+      if (wtResult.success && wtResult.worktreePath) {
+        effectiveCwd = wtResult.worktreePath
+        workspaceStore.setTerminalWorktreeInfo(terminalId, wtResult.worktreePath, wtResult.branchName)
+      }
+    }
+
+    window.electronAPI.pty.create({
+      id: terminalId,
+      cwd: effectiveCwd,
+      type: 'terminal',
+      agentPreset: isWorktree ? 'claude-cli-worktree' as AgentPresetId : 'claude-cli' as AgentPresetId,
+      shell,
+      customEnv: {
+        ...customEnv,
+        CLAUDE_CODE_NO_FLICKER: '1',
+      }
+    })
+
+    // Build CLI command using bundled CLI
+    const cmdParts = ['node', `"${cliPath}"`]
+    if (settings.allowBypassPermissions) {
+      cmdParts.push('--dangerously-skip-permissions')
+    }
+    const cmd = cmdParts.join(' ')
+
+    setTimeout(() => {
+      window.electronAPI.pty.write(terminalId, cmd + '\r')
+    }, 500)
+  }, [workspace.folderPath, workspace.envVars])
+
+  const handleAddClaudeCli = useCallback(async () => {
+    const terminal = workspaceStore.addTerminal(workspace.id, 'claude-cli' as AgentPresetId)
+    workspaceStore.setFocusedTerminal(terminal.id)
+    workspaceStore.save()
+    await startClaudeCliPty(terminal.id, workspace.folderPath, false)
+  }, [workspace.id, workspace.folderPath, startClaudeCliPty])
+
+  const handleAddClaudeCliWorktree = useCallback(async () => {
+    const terminal = workspaceStore.addTerminal(workspace.id, 'claude-cli-worktree' as AgentPresetId)
+    workspaceStore.setFocusedTerminal(terminal.id)
+    workspaceStore.save()
+    await startClaudeCliPty(terminal.id, workspace.folderPath, true)
+  }, [workspace.id, workspace.folderPath, startClaudeCliPty])
+
   const isDebugMode = window.electronAPI?.debug?.isDebugMode
 
   const handleCloseTerminal = useCallback((id: string) => {
@@ -355,6 +417,10 @@ export function WorkspaceView({ workspace, terminals, focusedTerminalId, isActiv
         }
       } else {
         window.electronAPI.pty.kill(showCloseConfirm)
+        // Clean up worktree for claude-cli-worktree preset
+        if (cleanWorktree && terminal?.agentPreset === 'claude-cli-worktree') {
+          window.electronAPI.worktree.remove(showCloseConfirm, true)
+        }
       }
       workspaceStore.removeTerminal(showCloseConfirm)
       workspaceStore.save()
@@ -372,6 +438,10 @@ export function WorkspaceView({ workspace, terminals, focusedTerminalId, isActiv
           cwd: terminal.cwd,
           ...(terminal.agentPreset === 'claude-code-worktree' ? { useWorktree: true, worktreePath: terminal.worktreePath, worktreeBranch: terminal.worktreeBranch } : {}),
         })
+      } else if (terminal.agentPreset === 'claude-cli' || terminal.agentPreset === 'claude-cli-worktree') {
+        // Restart claude-cli PTY with bundled CLI
+        await window.electronAPI.pty.kill(id)
+        await startClaudeCliPty(id, terminal.cwd || workspace.folderPath, terminal.agentPreset === 'claude-cli-worktree')
       } else {
         const cwd = await window.electronAPI.pty.getCwd(id) || terminal.cwd
         const shell = await getShellFromSettings()
@@ -528,6 +598,8 @@ export function WorkspaceView({ workspace, terminals, focusedTerminalId, isActiv
         onAddClaudeAgent={handleAddClaudeAgent}
         onAddClaudeAgentV2={handleAddClaudeAgentV2}
         onAddClaudeWorktree={isDebugMode ? handleAddClaudeWorktree : undefined}
+        onAddClaudeCli={handleAddClaudeCli}
+        onAddClaudeCliWorktree={isDebugMode ? handleAddClaudeCliWorktree : undefined}
         onReorder={handleReorderTerminals}
         showAddButton={true}
         height={thumbnailSettings.height}
@@ -539,7 +611,7 @@ export function WorkspaceView({ workspace, terminals, focusedTerminalId, isActiv
         <CloseConfirmDialog
           onConfirm={() => handleConfirmClose(false)}
           onCancel={() => setShowCloseConfirm(null)}
-          isWorktree={terminals.find(t => t.id === showCloseConfirm)?.agentPreset === 'claude-code-worktree'}
+          isWorktree={['claude-code-worktree', 'claude-cli-worktree'].includes(terminals.find(t => t.id === showCloseConfirm)?.agentPreset || '')}
           onConfirmAndClean={() => handleConfirmClose(true)}
         />
       )}

@@ -51,6 +51,7 @@ if (process.platform === 'darwin') {
 }
 import { PtyManager } from './pty-manager'
 import { ClaudeAgentManager } from './claude-agent-manager'
+import { worktreeManager } from './worktree-manager'
 import { checkForUpdates, UpdateCheckResult } from './update-checker'
 import { snippetDb, CreateSnippetInput } from './snippet-db'
 import { ProfileManager } from './profile-manager'
@@ -773,6 +774,19 @@ function registerProxiedHandlers() {
     return result
   })
 
+  // Get bundled Claude CLI path for claude-cli preset
+  registerHandler('claude:get-cli-path', () => {
+    try {
+      let resolved = require.resolve('@anthropic-ai/claude-code/cli.js')
+      if (resolved.includes('app.asar') && !resolved.includes('app.asar.unpacked')) {
+        resolved = resolved.replace('app.asar', 'app.asar.unpacked')
+      }
+      return resolved
+    } catch {
+      return ''
+    }
+  })
+
   // Claude Agent SDK
   registerHandler('claude:start-session', (_ctx, sessionId: string, options: { cwd: string; prompt?: string; permissionMode?: string; model?: string; effort?: string; apiVersion?: 'v1' | 'v2'; useWorktree?: boolean; worktreePath?: string; worktreeBranch?: string }) => claudeManager?.startSession(sessionId, options))
   registerHandler('claude:send-message', (_ctx, sessionId: string, prompt: string, images?: string[]) => claudeManager?.sendMessage(sessionId, prompt, images))
@@ -787,6 +801,34 @@ function registerProxiedHandlers() {
   registerHandler('claude:get-supported-agents', (_ctx, sessionId: string) => claudeManager?.getSupportedAgents(sessionId))
   registerHandler('claude:get-worktree-status', (_ctx, sessionId: string) => claudeManager?.getWorktreeStatus(sessionId))
   registerHandler('claude:cleanup-worktree', (_ctx, sessionId: string, deleteBranch: boolean) => claudeManager?.cleanupWorktree(sessionId, deleteBranch))
+  // Standalone worktree operations (for claude-cli preset, not tied to SDK session)
+  registerHandler('worktree:create', async (_ctx, sessionId: string, cwd: string) => {
+    try {
+      const info = await worktreeManager.createWorktree(sessionId, cwd)
+      return { success: true, ...info }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+  registerHandler('worktree:remove', async (_ctx, sessionId: string, deleteBranch: boolean) => {
+    try {
+      await worktreeManager.removeWorktree(sessionId, deleteBranch)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+  registerHandler('worktree:status', async (_ctx, sessionId: string) => {
+    return worktreeManager.getWorktreeStatus(sessionId)
+  })
+  registerHandler('worktree:merge', async (_ctx, sessionId: string, strategy: 'merge' | 'cherry-pick') => {
+    return worktreeManager.mergeWorktree(sessionId, strategy)
+  })
+  registerHandler('worktree:rehydrate', (_ctx, sessionId: string, cwd: string, worktreePath: string, branchName: string) => {
+    worktreeManager.rehydrate(sessionId, cwd, worktreePath, branchName)
+    return { success: true }
+  })
+
   // claude auth login — open browser-based login flow
   registerHandler('claude:auth-login', async () => {
     const { execFile } = await import('child_process')

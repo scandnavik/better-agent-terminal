@@ -13,6 +13,8 @@ interface ThumbnailBarProps {
   onAddClaudeAgent?: () => void
   onAddClaudeAgentV2?: () => void
   onAddClaudeWorktree?: () => void
+  onAddClaudeCli?: () => void
+  onAddClaudeCliWorktree?: () => void
   onReorder?: (orderedIds: string[]) => void
   showAddButton: boolean
   height?: number
@@ -28,6 +30,8 @@ export function ThumbnailBar({
   onAddClaudeAgent,
   onAddClaudeAgentV2,
   onAddClaudeWorktree,
+  onAddClaudeCli,
+  onAddClaudeCliWorktree,
   onReorder,
   showAddButton,
   height,
@@ -213,6 +217,24 @@ export function ThumbnailBar({
                     >
                       <span className="thumbnail-add-menu-icon" style={{ color: '#22c55e' }}>🌳</span>
                       Claude Code (Worktree)
+                    </div>
+                  )}
+                  {onAddClaudeCli && (
+                    <div
+                      className="thumbnail-add-menu-item"
+                      onClick={() => { onAddClaudeCli(); setShowAddMenu(false) }}
+                    >
+                      <span className="thumbnail-add-menu-icon" style={{ color: '#d97706' }}>▶</span>
+                      Claude CLI
+                    </div>
+                  )}
+                  {onAddClaudeCliWorktree && (
+                    <div
+                      className="thumbnail-add-menu-item"
+                      onClick={() => { onAddClaudeCliWorktree(); setShowAddMenu(false) }}
+                    >
+                      <span className="thumbnail-add-menu-icon" style={{ color: '#22c55e' }}>▶🌳</span>
+                      Claude CLI (Worktree)
                     </div>
                   )}
                 </div>,

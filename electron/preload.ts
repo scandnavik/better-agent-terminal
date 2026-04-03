@@ -165,6 +165,8 @@ const electronAPI = {
       ipcRenderer.invoke('claude:get-usage') as Promise<{ fiveHour: number | null; sevenDay: number | null; fiveHourReset: string | null; sevenDayReset: string | null } | null>,
     getUsageAccount: () =>
       ipcRenderer.invoke('claude:get-usage-account') as Promise<{ email: string; orgName: string; tier: string } | null>,
+    getCliPath: () =>
+      ipcRenderer.invoke('claude:get-cli-path') as Promise<string>,
     authLogin: () =>
       ipcRenderer.invoke('claude:auth-login') as Promise<{ success: boolean; error?: string }>,
     authStatus: () =>
@@ -237,6 +239,18 @@ const electronAPI = {
       ipcRenderer.on('claude:prompt-suggestion', handler)
       return () => ipcRenderer.removeListener('claude:prompt-suggestion', handler)
     },
+  },
+  worktree: {
+    create: (sessionId: string, cwd: string) =>
+      ipcRenderer.invoke('worktree:create', sessionId, cwd) as Promise<{ success: boolean; worktreePath?: string; branchName?: string; gitRoot?: string; sourceBranch?: string; error?: string }>,
+    remove: (sessionId: string, deleteBranch: boolean) =>
+      ipcRenderer.invoke('worktree:remove', sessionId, deleteBranch) as Promise<{ success: boolean; error?: string }>,
+    status: (sessionId: string) =>
+      ipcRenderer.invoke('worktree:status', sessionId) as Promise<{ diff: string; branchName: string; worktreePath: string; sourceBranch: string } | null>,
+    merge: (sessionId: string, strategy: 'merge' | 'cherry-pick') =>
+      ipcRenderer.invoke('worktree:merge', sessionId, strategy) as Promise<{ success: boolean; error?: string }>,
+    rehydrate: (sessionId: string, cwd: string, worktreePath: string, branchName: string) =>
+      ipcRenderer.invoke('worktree:rehydrate', sessionId, cwd, worktreePath, branchName) as Promise<{ success: boolean }>,
   },
   github: {
     checkCli: () => ipcRenderer.invoke('github:check-cli') as Promise<{ installed: boolean; authenticated: boolean }>,
