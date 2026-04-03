@@ -2954,14 +2954,16 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId, showUs
             <button
               className="claude-worktree-btn"
               onClick={async () => {
-                if (!confirm(`Merge ${worktreeInfo.branchName} into ${worktreeInfo.sourceBranch}?`)) return
+                if (!await window.electronAPI.dialog.confirm(`Merge ${worktreeInfo.branchName} into ${worktreeInfo.sourceBranch}?`)) return
                 const result = await window.electronAPI.claude.mergeWorktree(sessionId, 'merge')
                 setMessages(prev => [...prev, {
                   id: `sys-merge-${Date.now()}`,
                   sessionId,
                   role: 'system' as const,
                   content: result.success
-                    ? `✅ Merged \`${worktreeInfo.branchName}\` into \`${worktreeInfo.sourceBranch}\``
+                    ? (result.error
+                      ? `✅ Merged \`${worktreeInfo.branchName}\` into \`${worktreeInfo.sourceBranch}\` (${result.error})`
+                      : `✅ Merged \`${worktreeInfo.branchName}\` into \`${worktreeInfo.sourceBranch}\` and pushed`)
                     : `❌ Merge failed: ${result.error}`,
                   timestamp: Date.now(),
                 }])
@@ -2976,7 +2978,7 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId, showUs
             <button
               className="claude-worktree-btn claude-worktree-btn-danger"
               onClick={async () => {
-                if (!confirm('Discard worktree and all its changes?')) return
+                if (!await window.electronAPI.dialog.confirm('Discard worktree and all its changes?')) return
                 await window.electronAPI.claude.cleanupWorktree(sessionId, true)
                 setWorktreeInfo(null)
                 workspaceStore.setTerminalWorktreeInfo(sessionId, undefined, undefined)

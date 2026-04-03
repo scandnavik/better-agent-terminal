@@ -338,6 +338,17 @@ export class WorktreeManager {
       }
 
       logger.log(`[Worktree] Merged ${info.branchName} into ${info.sourceBranch} via ${strategy}`)
+
+      // Push after merge
+      try {
+        await execFileAsync('git', ['push'], { cwd: info.gitRoot })
+        logger.log(`[Worktree] Pushed ${info.sourceBranch} after merge`)
+      } catch (pushErr) {
+        const pushMsg = pushErr instanceof Error ? pushErr.message : String(pushErr)
+        logger.warn(`[Worktree] Merge succeeded but push failed: ${pushMsg}`)
+        return { success: true, error: `Merged but push failed: ${pushMsg}` }
+      }
+
       return { success: true }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
