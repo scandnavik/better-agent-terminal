@@ -18,7 +18,7 @@ export const PROXIED_CHANNELS = new Set([
   'claude:start-session', 'claude:send-message', 'claude:stop-session',
   'claude:set-permission-mode', 'claude:set-model', 'claude:set-effort', 'claude:reset-session',
   'claude:get-supported-models', 'claude:get-account-info', 'claude:get-supported-commands', 'claude:get-supported-agents', 'claude:get-session-meta',
-  'claude:get-worktree-status', 'claude:cleanup-worktree', 'claude:merge-worktree',
+  'claude:get-worktree-status', 'claude:cleanup-worktree',
   'claude:resolve-permission', 'claude:resolve-ask-user',
   'claude:list-sessions', 'claude:resume-session', 'claude:fork-session', 'claude:stop-task', 'claude:rest-session',
   'claude:wake-session', 'claude:is-resting',

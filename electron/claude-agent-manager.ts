@@ -2176,7 +2176,4 @@ export class ClaudeAgentManager {
     }
   }
 
-  async mergeWorktree(sessionId: string, strategy: 'merge' | 'cherry-pick' = 'merge'): Promise<{ success: boolean; error?: string }> {
-    return worktreeManager.mergeWorktree(sessionId, strategy)
-  }
 }
