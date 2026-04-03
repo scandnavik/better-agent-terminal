@@ -110,6 +110,24 @@ if (process.platform === 'win32') {
     ? `org.tonyq.better-agent-terminal.runtime-${runtimeId}`
     : 'org.tonyq.better-agent-terminal'
   app.setAppUserModelId(appModelId)
+
+  // Fix Start Menu shortcut AppUserModelId for Windows notifications (issue #77).
+  // NSIS installer may not embed the AppUserModelId into the .lnk, causing Windows
+  // to silently drop all toast notifications. Patch it at startup if needed.
+  if (!runtimeId) {
+    try {
+      const shortcutPath = path.join(
+        app.getPath('appData'),
+        'Microsoft', 'Windows', 'Start Menu', 'Programs', 'BetterAgentTerminal.lnk'
+      )
+      if (fsSync.existsSync(shortcutPath)) {
+        const shortcut = shell.readShortcutLink(shortcutPath)
+        if (shortcut.appUserModelId !== appModelId) {
+          shell.writeShortcutLink(shortcutPath, 'update', { appUserModelId: appModelId })
+        }
+      }
+    } catch { /* non-critical — notification may not work but app still runs */ }
+  }
 }
 
 // Single instance lock — if a second instance is launched, focus existing and open new window
