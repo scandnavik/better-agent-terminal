@@ -322,19 +322,42 @@ export class WorktreeManager {
     if (!info) return { success: false, error: 'No worktree found for this session' }
 
     try {
-      if (strategy === 'merge') {
-        await execFileAsync('git', ['merge', info.branchName, '--no-ff', '-m', `Merge worktree branch ${info.branchName}`], { cwd: info.gitRoot })
-      } else {
-        // cherry-pick: get commits on worktree branch since it diverged
-        const { stdout: logOutput } = await execFileAsync(
-          'git', ['log', '--format=%H', `${info.sourceBranch}..${info.branchName}`],
-          { cwd: info.gitRoot }
-        )
-        const commits = logOutput.trim().split('\n').filter(Boolean).reverse()
-        if (commits.length === 0) {
-          return { success: false, error: 'No commits to cherry-pick' }
+      // Remember current branch so we can restore it after merge
+      const { stdout: currentBranch } = await execFileAsync(
+        'git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: info.gitRoot }
+      )
+      const prevBranch = currentBranch.trim()
+
+      // Checkout source branch before merging
+      if (prevBranch !== info.sourceBranch) {
+        await execFileAsync('git', ['checkout', info.sourceBranch], { cwd: info.gitRoot })
+      }
+
+      try {
+        if (strategy === 'merge') {
+          await execFileAsync('git', ['merge', info.branchName, '--no-ff', '-m', `Merge worktree branch ${info.branchName}`], { cwd: info.gitRoot })
+        } else {
+          // cherry-pick: get commits on worktree branch since it diverged
+          const { stdout: logOutput } = await execFileAsync(
+            'git', ['log', '--format=%H', `${info.sourceBranch}..${info.branchName}`],
+            { cwd: info.gitRoot }
+          )
+          const commits = logOutput.trim().split('\n').filter(Boolean).reverse()
+          if (commits.length === 0) {
+            // Restore previous branch before returning
+            if (prevBranch !== info.sourceBranch) {
+              await execFileAsync('git', ['checkout', prevBranch], { cwd: info.gitRoot }).catch(() => {})
+            }
+            return { success: false, error: 'No commits to cherry-pick' }
+          }
+          await execFileAsync('git', ['cherry-pick', ...commits], { cwd: info.gitRoot })
         }
-        await execFileAsync('git', ['cherry-pick', ...commits], { cwd: info.gitRoot })
+      } catch (mergeErr) {
+        // Restore previous branch on merge failure
+        if (prevBranch !== info.sourceBranch) {
+          await execFileAsync('git', ['checkout', prevBranch], { cwd: info.gitRoot }).catch(() => {})
+        }
+        throw mergeErr
       }
 
       logger.log(`[Worktree] Merged ${info.branchName} into ${info.sourceBranch} via ${strategy}`)
@@ -346,7 +369,16 @@ export class WorktreeManager {
       } catch (pushErr) {
         const pushMsg = pushErr instanceof Error ? pushErr.message : String(pushErr)
         logger.warn(`[Worktree] Merge succeeded but push failed: ${pushMsg}`)
+        // Restore previous branch
+        if (prevBranch !== info.sourceBranch) {
+          await execFileAsync('git', ['checkout', prevBranch], { cwd: info.gitRoot }).catch(() => {})
+        }
         return { success: true, error: `Merged but push failed: ${pushMsg}` }
+      }
+
+      // Restore previous branch after successful merge+push
+      if (prevBranch !== info.sourceBranch) {
+        await execFileAsync('git', ['checkout', prevBranch], { cwd: info.gitRoot }).catch(() => {})
       }
 
       return { success: true }
