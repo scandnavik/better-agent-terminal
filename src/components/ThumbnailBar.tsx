@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import type { TerminalInstance } from '../types'
 import { TerminalThumbnail } from './TerminalThumbnail'
@@ -48,13 +49,18 @@ export function ThumbnailBar({
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
   const addMenuRef = useRef<HTMLDivElement>(null)
+  const addMenuPopupRef = useRef<HTMLDivElement>(null)
   const addBtnRef = useRef<HTMLButtonElement>(null)
 
   // Close menu on outside click
   useEffect(() => {
     if (!showAddMenu) return
     const handleClick = (e: MouseEvent) => {
-      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (
+        addMenuRef.current && !addMenuRef.current.contains(target) &&
+        addMenuPopupRef.current && !addMenuPopupRef.current.contains(target)
+      ) {
         setShowAddMenu(false)
       }
     }
@@ -173,8 +179,8 @@ export function ThumbnailBar({
               >
                 +
               </button>
-              {showAddMenu && (
-                <div className="thumbnail-add-menu" style={menuStyle}>
+              {showAddMenu && createPortal(
+                <div className="thumbnail-add-menu" ref={addMenuPopupRef} style={menuStyle}>
                   <div
                     className="thumbnail-add-menu-item"
                     onClick={() => { onAddTerminal(); setShowAddMenu(false) }}
@@ -209,7 +215,8 @@ export function ThumbnailBar({
                       Claude Code (Worktree)
                     </div>
                   )}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
           )}
