@@ -103,7 +103,7 @@
         "target": "dmg",
         "arch": "universal"
       },
-      "icon": "assets/icon.png",
+      "icon": "assets/icon-512.png",
       "category": "public.app-category.developer-tools",
       "identity": "TonyQ CO., LTD. (8JVDJGLLYR)",
       "hardenedRuntime": true,
@@ -121,7 +121,7 @@
     },
     "linux": {
       "target": "AppImage",
-      "icon": "assets/icon.png"
+      "icon": "assets/icon-512.png"
     },
     "forceCodeSigning": false,
     "npmRebuild": false,
@@ -130,7 +130,8 @@
       "dist-electron/**/*",
       "node_modules/**/*",
       "assets/icon.ico",
-      "assets/icon.png"
+      "assets/icon.png",
+      "assets/icon-512.png"
     ],
     "asarUnpack": [
       "node_modules/@anthropic-ai/claude-code/**/*",
