@@ -104,12 +104,16 @@ export function WorkspaceView({ workspace, terminals, focusedTerminalId, isActiv
   const [thumbnailSettings, setThumbnailSettings] = useState<ThumbnailSettings>(loadThumbnailSettings)
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(loadWorkspaceTab)
   const [hasGithubRemote, setHasGithubRemote] = useState(false)
+  const [isGitRepo, setIsGitRepo] = useState(false)
 
-  // Detect GitHub remote
+  // Detect git repo and GitHub remote
   useEffect(() => {
     window.electronAPI.git.getGithubUrl(workspace.folderPath).then(url => {
       setHasGithubRemote(!!url)
     }).catch(() => setHasGithubRemote(false))
+    window.electronAPI.git.getRoot(workspace.folderPath).then(root => {
+      setIsGitRepo(!!root)
+    }).catch(() => setIsGitRepo(false))
   }, [workspace.folderPath])
 
   // Fallback if saved tab is 'github' but no GitHub remote
@@ -367,7 +371,11 @@ export function WorkspaceView({ workspace, terminals, focusedTerminalId, isActiv
     })
 
     // Build CLI command using bundled CLI
+    // Worktree sessions start fresh (--continue would resume a session in git root)
     const cmdParts = ['node', `"${cliPath}"`]
+    if (!isWorktree) {
+      cmdParts.push('--continue')
+    }
     if (settings.allowBypassPermissions) {
       cmdParts.push('--dangerously-skip-permissions')
     }
@@ -597,9 +605,9 @@ export function WorkspaceView({ workspace, terminals, focusedTerminalId, isActiv
         onAddTerminal={handleAddTerminal}
         onAddClaudeAgent={handleAddClaudeAgent}
         onAddClaudeAgentV2={handleAddClaudeAgentV2}
-        onAddClaudeWorktree={isDebugMode ? handleAddClaudeWorktree : undefined}
+        onAddClaudeWorktree={isDebugMode && isGitRepo ? handleAddClaudeWorktree : undefined}
         onAddClaudeCli={handleAddClaudeCli}
-        onAddClaudeCliWorktree={isDebugMode ? handleAddClaudeCliWorktree : undefined}
+        onAddClaudeCliWorktree={isDebugMode && isGitRepo ? handleAddClaudeCliWorktree : undefined}
         onReorder={handleReorderTerminals}
         showAddButton={true}
         height={thumbnailSettings.height}
