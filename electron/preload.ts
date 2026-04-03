@@ -147,8 +147,6 @@ const electronAPI = {
       ipcRenderer.invoke('claude:get-worktree-status', sessionId) as Promise<{ diff: string; branchName: string; worktreePath: string; sourceBranch: string } | null>,
     cleanupWorktree: (sessionId: string, deleteBranch: boolean) =>
       ipcRenderer.invoke('claude:cleanup-worktree', sessionId, deleteBranch) as Promise<boolean>,
-    mergeWorktree: (sessionId: string, strategy: 'merge' | 'cherry-pick') =>
-      ipcRenderer.invoke('claude:merge-worktree', sessionId, strategy) as Promise<{ success: boolean; error?: string }>,
     scanSkills: (cwd: string) =>
       ipcRenderer.invoke('claude:scan-skills', cwd) as Promise<{ name: string; description: string; scope: 'project' | 'global' }[]>,
     getSessionMeta: (sessionId: string) =>

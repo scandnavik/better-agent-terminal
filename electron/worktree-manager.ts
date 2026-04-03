@@ -315,49 +315,6 @@ export class WorktreeManager {
   }
 
   /**
-   * Merge worktree branch back to source branch.
-   */
-  async mergeWorktree(sessionId: string, strategy: 'merge' | 'cherry-pick' = 'merge'): Promise<{ success: boolean; error?: string }> {
-    const info = this.activeWorktrees.get(sessionId)
-    if (!info) return { success: false, error: 'No worktree found for this session' }
-
-    try {
-      if (strategy === 'merge') {
-        await execFileAsync('git', ['merge', info.branchName, '--no-ff', '-m', `Merge worktree branch ${info.branchName}`], { cwd: info.gitRoot })
-      } else {
-        // cherry-pick: get commits on worktree branch since it diverged
-        const { stdout: logOutput } = await execFileAsync(
-          'git', ['log', '--format=%H', `${info.sourceBranch}..${info.branchName}`],
-          { cwd: info.gitRoot }
-        )
-        const commits = logOutput.trim().split('\n').filter(Boolean).reverse()
-        if (commits.length === 0) {
-          return { success: false, error: 'No commits to cherry-pick' }
-        }
-        await execFileAsync('git', ['cherry-pick', ...commits], { cwd: info.gitRoot })
-      }
-
-      logger.log(`[Worktree] Merged ${info.branchName} into ${info.sourceBranch} via ${strategy}`)
-
-      // Push after merge
-      try {
-        await execFileAsync('git', ['push'], { cwd: info.gitRoot })
-        logger.log(`[Worktree] Pushed ${info.sourceBranch} after merge`)
-      } catch (pushErr) {
-        const pushMsg = pushErr instanceof Error ? pushErr.message : String(pushErr)
-        logger.warn(`[Worktree] Merge succeeded but push failed: ${pushMsg}`)
-        return { success: true, error: `Merged but push failed: ${pushMsg}` }
-      }
-
-      return { success: true }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      logger.error(`[Worktree] Merge failed: ${msg}`)
-      return { success: false, error: msg }
-    }
-  }
-
-  /**
    * List orphaned worktrees (not tracked by this manager).
    * Does NOT delete them — caller must ask the user for confirmation first.
    */

@@ -46,7 +46,9 @@ export function ThumbnailBar({
   const [dropTargetId, setDropTargetId] = useState<string | null>(null)
   const [dropPosition, setDropPosition] = useState<'before' | 'after'>('before')
   const [showAddMenu, setShowAddMenu] = useState(false)
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
   const addMenuRef = useRef<HTMLDivElement>(null)
+  const addBtnRef = useRef<HTMLButtonElement>(null)
 
   // Close menu on outside click
   useEffect(() => {
@@ -150,14 +152,29 @@ export function ThumbnailBar({
           {onAddTerminal && (
             <div className="thumbnail-add-wrapper" ref={addMenuRef}>
               <button
+                ref={addBtnRef}
                 className="thumbnail-add-btn"
-                onClick={() => setShowAddMenu(prev => !prev)}
+                onClick={() => {
+                  setShowAddMenu(prev => {
+                    if (!prev && addBtnRef.current) {
+                      const rect = addBtnRef.current.getBoundingClientRect()
+                      const menuHeight = 200
+                      const spaceBelow = window.innerHeight - rect.bottom
+                      const openUpward = spaceBelow < menuHeight && rect.top > menuHeight
+                      setMenuStyle(openUpward
+                        ? { bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right }
+                        : { top: rect.bottom + 4, right: window.innerWidth - rect.right }
+                      )
+                    }
+                    return !prev
+                  })
+                }}
                 title={t('terminal.addTerminalOrAgent')}
               >
                 +
               </button>
               {showAddMenu && (
-                <div className="thumbnail-add-menu">
+                <div className="thumbnail-add-menu" style={menuStyle}>
                   <div
                     className="thumbnail-add-menu-item"
                     onClick={() => { onAddTerminal(); setShowAddMenu(false) }}

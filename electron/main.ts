@@ -787,8 +787,6 @@ function registerProxiedHandlers() {
   registerHandler('claude:get-supported-agents', (_ctx, sessionId: string) => claudeManager?.getSupportedAgents(sessionId))
   registerHandler('claude:get-worktree-status', (_ctx, sessionId: string) => claudeManager?.getWorktreeStatus(sessionId))
   registerHandler('claude:cleanup-worktree', (_ctx, sessionId: string, deleteBranch: boolean) => claudeManager?.cleanupWorktree(sessionId, deleteBranch))
-  registerHandler('claude:merge-worktree', (_ctx, sessionId: string, strategy: 'merge' | 'cherry-pick') => claudeManager?.mergeWorktree(sessionId, strategy))
-
   // claude auth login — open browser-based login flow
   registerHandler('claude:auth-login', async () => {
     const { execFile } = await import('child_process')
