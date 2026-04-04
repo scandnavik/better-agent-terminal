@@ -168,6 +168,7 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId, showUs
   })
   const [claudeUsage, setClaudeUsage] = useState(workspaceStore.claudeUsage)
   const [usageAccount, setUsageAccount] = useState(workspaceStore.usageAccount)
+  const [rateLimitResetsAt, setRateLimitResetsAt] = useState<number | null>(null)
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([])
   const [pendingPermission, setPendingPermission] = useState<PendingPermission | null>(null)
   const [planFileContent, setPlanFileContent] = useState<string | null>(null)
@@ -773,6 +774,11 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId, showUs
         setWorktreeInfo(info)
         // Persist to terminal state for workspace save/load
         workspaceStore.setTerminalWorktreeInfo(sessionId, info?.worktreePath, info?.branchName)
+      }),
+
+      api.onRateLimit((sid: string, info: { resetsAt: number; isUsingOverage: boolean }) => {
+        if (sid !== sessionId) return
+        setRateLimitResetsAt(info.resetsAt)
       }),
     ]
 
@@ -3366,42 +3372,13 @@ export function ClaudeAgentPanel({ sessionId, cwd, isActive, workspaceId, showUs
             const ws = workspaceId ? workspaceStore.getState().workspaces.find(w => w.id === workspaceId) : null
             return ws ? <span key="workspace" className="claude-statusline-item">{ws.alias || ws.name}</span> : null
           },
-          usage5h: () => {
-            if (claudeUsage?.fiveHour == null) return null
-            const pacing = workspaceStore.getUsagePacing()
-            const pacingIcon = pacing ? (pacing.onPace ? ' ▼' : ' ▲') : ''
-            const stale = (claudeUsage as any).fiveHourStale
-            const accountLine = usageAccount ? `${usageAccount.email} · ${usageAccount.orgName} · ${usageAccount.tier}` : ''
-            const pacingLine = pacing ? `Time elapsed: ${Math.round(pacing.timeElapsedPct)}%${pacing.estimatedMinutesToLimit != null ? ` · ETA: ~${pacing.estimatedMinutesToLimit}min` : ''}` : ''
-            const titleParts = [accountLine, pacingLine].filter(Boolean)
-            return (
-              <span key="usage5h"
-                className={`claude-statusline-item${claudeUsage.fiveHour > 80 ? ' claude-usage-high' : claudeUsage.fiveHour > 50 ? ' claude-usage-mid' : ''}${stale ? ' claude-usage-stale' : ''}`}
-                title={titleParts.join('\n') || undefined}
-                style={!pacing?.onPace && pacing ? { fontWeight: 600 } : undefined}>
-                5h:{Math.round(claudeUsage.fiveHour)}%{pacingIcon}
-              </span>
-            )
-          },
+          usage5h: () => null,
           usage5hReset: () => {
-            if (!claudeUsage?.fiveHourReset) return null
-            return <span key="usage5hReset" className="claude-statusline-item">↻{fmtRemaining(new Date(claudeUsage.fiveHourReset))}</span>
+            if (!rateLimitResetsAt) return null
+            return <span key="usage5hReset" className="claude-statusline-item" title="5h rate limit resets at">↻{fmtRemaining(new Date(rateLimitResetsAt))}</span>
           },
-          usage7d: () => {
-            if (claudeUsage?.sevenDay == null) return null
-            const accountLine = usageAccount ? `${usageAccount.email} · ${usageAccount.orgName} · ${usageAccount.tier}` : ''
-            return (
-              <span key="usage7d"
-                className={`claude-statusline-item${(claudeUsage.sevenDay ?? 0) > 80 ? ' claude-usage-high' : (claudeUsage.sevenDay ?? 0) > 50 ? ' claude-usage-mid' : ''}`}
-                title={accountLine || undefined}>
-                7d:{Math.round(claudeUsage.sevenDay ?? 0)}%
-              </span>
-            )
-          },
-          usage7dReset: () => {
-            if (!claudeUsage?.sevenDayReset) return null
-            return <span key="usage7dReset" className="claude-statusline-item">↻{fmtRemaining(new Date(claudeUsage.sevenDayReset))}</span>
-          },
+          usage7d: () => null,
+          usage7dReset: () => null,
           maxOut: () => !sessionMeta || !sessionMeta.maxOutputTokens ? null : (
             <span key="maxOut" className="claude-statusline-item" title={`Max output: ${sessionMeta.maxOutputTokens.toLocaleString()} tokens`}>
               maxOut:{(sessionMeta.maxOutputTokens / 1000).toFixed(0)}k

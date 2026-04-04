@@ -767,7 +767,14 @@ export class ClaudeAgentManager {
       logger.log(`[claude:msg] type=${message.type} subtype=${msgSubtype || ''} parent_tool_use_id=${(message as { parent_tool_use_id?: string }).parent_tool_use_id || 'none'}`)
     }
     if (message.type === 'rate_limit_event') {
-      logger.log(`[claude:rate_limit_event] ${JSON.stringify(message)}`)
+      const rle = message as { rate_limit_info?: { resetsAt?: number; rateLimitType?: string; isUsingOverage?: boolean } }
+      const info = rle.rate_limit_info
+      if (info?.resetsAt && info.rateLimitType === 'five_hour') {
+        this.send('claude:rate-limit', sessionId, {
+          resetsAt: info.resetsAt * 1000, // convert to ms
+          isUsingOverage: info.isUsingOverage ?? false,
+        })
+      }
     }
     if (message.type === 'assistant') {
       const blocks = (message as { message?: { content?: unknown[] } }).message?.content
