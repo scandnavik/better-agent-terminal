@@ -164,8 +164,8 @@ jobs:
         id: gate
         shell: bash
         run: |
-          # Chocolatey package pending review — skip until 2026-04-05
-          if [[ "$(date -u +%Y%m%d)" -lt "20260405" ]]; then
+          # Chocolatey package pending review — skip until 2026-04-10
+          if [[ "$(date -u +%Y%m%d)" -lt "20260410" ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "Skipping: Chocolatey package not yet approved"
           else
