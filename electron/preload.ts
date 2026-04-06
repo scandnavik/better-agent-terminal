@@ -284,16 +284,16 @@ const electronAPI = {
     },
   },
   profile: {
-    list: () => ipcRenderer.invoke('profile:list') as Promise<{ profiles: { id: string; name: string; type: 'local' | 'remote'; remoteHost?: string; remotePort?: number; remoteToken?: string; createdAt: number; updatedAt: number }[]; activeProfileIds: string[] }>,
-    create: (name: string, options?: { type?: 'local' | 'remote'; remoteHost?: string; remotePort?: number; remoteToken?: string }) =>
+    list: () => ipcRenderer.invoke('profile:list') as Promise<{ profiles: { id: string; name: string; type: 'local' | 'remote'; remoteHost?: string; remotePort?: number; remoteToken?: string; remoteProfileId?: string; createdAt: number; updatedAt: number }[]; activeProfileIds: string[] }>,
+    create: (name: string, options?: { type?: 'local' | 'remote'; remoteHost?: string; remotePort?: number; remoteToken?: string; remoteProfileId?: string }) =>
       ipcRenderer.invoke('profile:create', name, options) as Promise<{ id: string; name: string; type: 'local' | 'remote'; createdAt: number; updatedAt: number }>,
     save: (profileId: string) => ipcRenderer.invoke('profile:save', profileId) as Promise<boolean>,
     load: (profileId: string) => ipcRenderer.invoke('profile:load', profileId) as Promise<unknown>,
     delete: (profileId: string) => ipcRenderer.invoke('profile:delete', profileId) as Promise<boolean>,
     rename: (profileId: string, newName: string) => ipcRenderer.invoke('profile:rename', profileId, newName) as Promise<boolean>,
-    update: (profileId: string, updates: { remoteHost?: string; remotePort?: number; remoteToken?: string }) => ipcRenderer.invoke('profile:update', profileId, updates) as Promise<boolean>,
+    update: (profileId: string, updates: { remoteHost?: string; remotePort?: number; remoteToken?: string; remoteProfileId?: string }) => ipcRenderer.invoke('profile:update', profileId, updates) as Promise<boolean>,
     duplicate: (profileId: string, newName: string) => ipcRenderer.invoke('profile:duplicate', profileId, newName) as Promise<{ id: string; name: string; createdAt: number; updatedAt: number } | null>,
-    get: (profileId: string) => ipcRenderer.invoke('profile:get', profileId) as Promise<{ id: string; name: string; type: 'local' | 'remote'; remoteHost?: string; remotePort?: number; remoteToken?: string; createdAt: number; updatedAt: number } | null>,
+    get: (profileId: string) => ipcRenderer.invoke('profile:get', profileId) as Promise<{ id: string; name: string; type: 'local' | 'remote'; remoteHost?: string; remotePort?: number; remoteToken?: string; remoteProfileId?: string; createdAt: number; updatedAt: number } | null>,
     getActiveIds: () => ipcRenderer.invoke('profile:get-active-ids') as Promise<string[]>,
     activate: (profileId: string) => ipcRenderer.invoke('profile:activate', profileId) as Promise<void>,
     deactivate: (profileId: string) => ipcRenderer.invoke('profile:deactivate', profileId) as Promise<void>,
@@ -313,6 +313,8 @@ const electronAPI = {
       ipcRenderer.invoke('remote:client-status') as Promise<{ connected: boolean; info: { host: string; port: number } | null }>,
     testConnection: (host: string, port: number, token: string) =>
       ipcRenderer.invoke('remote:test-connection', host, port, token) as Promise<{ ok: boolean }>,
+    listProfiles: (host: string, port: number, token: string) =>
+      ipcRenderer.invoke('remote:list-profiles', host, port, token) as Promise<{ profiles: { id: string; name: string; type: string }[] } | { error: string }>,
   },
   tunnel: {
     getConnection: () =>

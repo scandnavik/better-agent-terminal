@@ -142,7 +142,10 @@
     "saveAndOpen": "Save Current & Open",
     "newWindow": "Open",
     "alreadyOpen": "This profile is already open in another window.",
-    "host": "Host"
+    "host": "Host",
+    "fetchProfiles": "Fetch Profiles",
+    "fetchingProfiles": "Fetching...",
+    "currentTarget": "Current target"
   },
 
   "workspace": {

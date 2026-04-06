@@ -8,8 +8,15 @@ interface ProfileEntry {
   remoteHost?: string
   remotePort?: number
   remoteToken?: string
+  remoteProfileId?: string
   createdAt: number
   updatedAt: number
+}
+
+interface RemoteProfileOption {
+  id: string
+  name: string
+  type: string
 }
 
 interface ProfilePanelProps {
@@ -38,6 +45,14 @@ export function ProfilePanel({ onClose, onSwitchNewWindow, onProfileRenamed }: P
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [testingId, setTestingId] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<Record<string, 'ok' | 'fail' | 'testing'>>({})
+  const [remoteProfiles, setRemoteProfiles] = useState<RemoteProfileOption[]>([])
+  const [selectedRemoteProfileId, setSelectedRemoteProfileId] = useState<string>('')
+  const [fetchingRemoteProfiles, setFetchingRemoteProfiles] = useState(false)
+  const [remoteProfileError, setRemoteProfileError] = useState<string>('')
+  // For editing existing remote profile's target
+  const [editRemoteProfiles, setEditRemoteProfiles] = useState<RemoteProfileOption[]>([])
+  const [editSelectedRemoteProfileId, setEditSelectedRemoteProfileId] = useState<string>('')
+  const [editFetchingRemoteProfiles, setEditFetchingRemoteProfiles] = useState(false)
   const createInputRef = useRef<HTMLInputElement>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
 
@@ -81,16 +96,42 @@ export function ProfilePanel({ onClose, onSwitchNewWindow, onProfileRenamed }: P
     return () => window.removeEventListener('keydown', handler)
   }, [creating, editingId, confirmDelete, onClose])
 
+  const fetchRemoteProfileList = async (host: string, port: number, token: string): Promise<RemoteProfileOption[]> => {
+    const result = await window.electronAPI.remote.listProfiles(host, port, token)
+    if ('error' in result) throw new Error(result.error)
+    return result.profiles
+  }
+
+  const handleFetchRemoteProfiles = async () => {
+    if (!remoteHost.trim() || !remoteToken.trim()) return
+    setFetchingRemoteProfiles(true)
+    setRemoteProfileError('')
+    try {
+      const profiles = await fetchRemoteProfileList(remoteHost.trim(), parseInt(remotePort) || 9876, remoteToken.trim())
+      setRemoteProfiles(profiles)
+      // Auto-select default or first
+      const defaultP = profiles.find(p => p.id === 'default') || profiles[0]
+      setSelectedRemoteProfileId(defaultP?.id || '')
+    } catch (err) {
+      setRemoteProfileError(err instanceof Error ? err.message : String(err))
+      setRemoteProfiles([])
+    } finally {
+      setFetchingRemoteProfiles(false)
+    }
+  }
+
   const handleCreate = async () => {
     const trimmed = newName.trim()
     if (!trimmed) return
     if (creating === 'remote') {
       if (!remoteHost.trim() || !remoteToken.trim()) return
+      if (!selectedRemoteProfileId) return
       await window.electronAPI.profile.create(trimmed, {
         type: 'remote',
         remoteHost: remoteHost.trim(),
         remotePort: parseInt(remotePort) || 9876,
         remoteToken: remoteToken.trim(),
+        remoteProfileId: selectedRemoteProfileId,
       })
     } else {
       await window.electronAPI.profile.create(trimmed)
@@ -100,6 +141,8 @@ export function ProfilePanel({ onClose, onSwitchNewWindow, onProfileRenamed }: P
     setRemoteHost('')
     setRemotePort('9876')
     setRemoteToken('')
+    setRemoteProfiles([])
+    setSelectedRemoteProfileId('')
     loadProfiles()
   }
 
@@ -118,6 +161,26 @@ export function ProfilePanel({ onClose, onSwitchNewWindow, onProfileRenamed }: P
     setEditRemoteHost(profile.remoteHost || '')
     setEditRemotePort(String(profile.remotePort || 9876))
     setEditRemoteToken(profile.remoteToken || '')
+    setEditRemoteProfiles([])
+    setEditSelectedRemoteProfileId(profile.remoteProfileId || '')
+  }
+
+  const handleFetchEditRemoteProfiles = async () => {
+    if (!editRemoteHost.trim() || !editRemoteToken.trim()) return
+    setEditFetchingRemoteProfiles(true)
+    try {
+      const profiles = await fetchRemoteProfileList(editRemoteHost.trim(), parseInt(editRemotePort) || 9876, editRemoteToken.trim())
+      setEditRemoteProfiles(profiles)
+      // Keep current selection if still valid, else auto-select
+      if (!profiles.some(p => p.id === editSelectedRemoteProfileId)) {
+        const defaultP = profiles.find(p => p.id === 'default') || profiles[0]
+        setEditSelectedRemoteProfileId(defaultP?.id || '')
+      }
+    } catch {
+      setEditRemoteProfiles([])
+    } finally {
+      setEditFetchingRemoteProfiles(false)
+    }
   }
 
   const handleSaveRemote = async (profileId: string) => {
@@ -128,8 +191,10 @@ export function ProfilePanel({ onClose, onSwitchNewWindow, onProfileRenamed }: P
       remoteHost: host,
       remotePort: parseInt(editRemotePort) || 9876,
       remoteToken: token,
+      remoteProfileId: editSelectedRemoteProfileId || undefined,
     })
     setEditingRemoteId(null)
+    setEditRemoteProfiles([])
     loadProfiles()
   }
 
@@ -215,37 +280,70 @@ export function ProfilePanel({ onClose, onSwitchNewWindow, onProfileRenamed }: P
                 }}
               />
               {creating === 'remote' && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <input
-                    type="text"
-                    className="profile-name-input"
-                    placeholder={t('profiles.hostPlaceholder')}
-                    value={remoteHost}
-                    onChange={e => setRemoteHost(e.target.value)}
-                    style={{ flex: '1 1 120px' }}
-                  />
-                  <input
-                    type="number"
-                    className="profile-name-input"
-                    placeholder={t('profiles.portPlaceholder')}
-                    value={remotePort}
-                    onChange={e => setRemotePort(e.target.value)}
-                    style={{ width: 70 }}
-                  />
-                  <input
-                    type="text"
-                    className="profile-name-input"
-                    placeholder={t('profiles.tokenPlaceholder')}
-                    value={remoteToken}
-                    onChange={e => setRemoteToken(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
-                    style={{ flex: '1 1 160px' }}
-                  />
-                </div>
+                <>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      className="profile-name-input"
+                      placeholder={t('profiles.hostPlaceholder')}
+                      value={remoteHost}
+                      onChange={e => { setRemoteHost(e.target.value); setRemoteProfiles([]); setSelectedRemoteProfileId('') }}
+                      style={{ flex: '1 1 120px' }}
+                    />
+                    <input
+                      type="number"
+                      className="profile-name-input"
+                      placeholder={t('profiles.portPlaceholder')}
+                      value={remotePort}
+                      onChange={e => { setRemotePort(e.target.value); setRemoteProfiles([]); setSelectedRemoteProfileId('') }}
+                      style={{ width: 70 }}
+                    />
+                    <input
+                      type="text"
+                      className="profile-name-input"
+                      placeholder={t('profiles.tokenPlaceholder')}
+                      value={remoteToken}
+                      onChange={e => { setRemoteToken(e.target.value); setRemoteProfiles([]); setSelectedRemoteProfileId('') }}
+                      style={{ flex: '1 1 160px' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <button
+                      className="profile-action-btn"
+                      onClick={handleFetchRemoteProfiles}
+                      disabled={fetchingRemoteProfiles || !remoteHost.trim() || !remoteToken.trim()}
+                    >
+                      {fetchingRemoteProfiles ? t('profiles.fetchingProfiles') : t('profiles.fetchProfiles')}
+                    </button>
+                    {remoteProfileError && (
+                      <span style={{ color: '#e5534b', fontSize: 12 }}>{remoteProfileError}</span>
+                    )}
+                  </div>
+                  {remoteProfiles.length > 0 && (
+                    <select
+                      className="profile-name-input"
+                      value={selectedRemoteProfileId}
+                      onChange={e => setSelectedRemoteProfileId(e.target.value)}
+                      style={{ width: '100%' }}
+                    >
+                      {remoteProfiles.map(rp => (
+                        <option key={rp.id} value={rp.id}>
+                          {rp.name} {rp.type === 'remote' ? `(${t('profiles.remote')})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </>
               )}
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="profile-action-btn" onClick={handleCreate}>{t('common.create')}</button>
-                <button className="profile-action-btn" onClick={() => { setCreating(false); setNewName('') }}>{t('common.cancel')}</button>
+                <button
+                  className="profile-action-btn"
+                  onClick={handleCreate}
+                  disabled={creating === 'remote' && !selectedRemoteProfileId}
+                >
+                  {t('common.create')}
+                </button>
+                <button className="profile-action-btn" onClick={() => { setCreating(false); setNewName(''); setRemoteProfiles([]); setSelectedRemoteProfileId('') }}>{t('common.cancel')}</button>
               </div>
             </div>
           )}
@@ -283,7 +381,7 @@ export function ProfilePanel({ onClose, onSwitchNewWindow, onProfileRenamed }: P
                       </span>
                       <span className="profile-item-meta">
                         {profile.type === 'remote'
-                          ? `${profile.remoteHost}:${profile.remotePort}`
+                          ? `${profile.remoteHost}:${profile.remotePort}${profile.remoteProfileId ? ` → ${profile.remoteProfileId}` : ''}`
                           : t('profiles.updated', { date: formatDate(profile.updatedAt) })}
                       </span>
                     </>
@@ -297,7 +395,7 @@ export function ProfilePanel({ onClose, onSwitchNewWindow, onProfileRenamed }: P
                       className="profile-name-input"
                       placeholder={t('profiles.host')}
                       value={editRemoteHost}
-                      onChange={e => setEditRemoteHost(e.target.value)}
+                      onChange={e => { setEditRemoteHost(e.target.value); setEditRemoteProfiles([]) }}
                       style={{ flex: '1 1 120px' }}
                     />
                     <input
@@ -305,7 +403,7 @@ export function ProfilePanel({ onClose, onSwitchNewWindow, onProfileRenamed }: P
                       className="profile-name-input"
                       placeholder={t('profiles.portPlaceholder')}
                       value={editRemotePort}
-                      onChange={e => setEditRemotePort(e.target.value)}
+                      onChange={e => { setEditRemotePort(e.target.value); setEditRemoteProfiles([]) }}
                       style={{ width: 70 }}
                     />
                     <input
@@ -313,13 +411,40 @@ export function ProfilePanel({ onClose, onSwitchNewWindow, onProfileRenamed }: P
                       className="profile-name-input"
                       placeholder={t('profiles.tokenPlaceholder')}
                       value={editRemoteToken}
-                      onChange={e => setEditRemoteToken(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') handleSaveRemote(profile.id) }}
+                      onChange={e => { setEditRemoteToken(e.target.value); setEditRemoteProfiles([]) }}
                       style={{ flex: '1 1 160px' }}
                     />
+                    <div style={{ display: 'flex', gap: 6, width: '100%', alignItems: 'center' }}>
+                      <button
+                        className="profile-action-btn"
+                        onClick={handleFetchEditRemoteProfiles}
+                        disabled={editFetchingRemoteProfiles || !editRemoteHost.trim() || !editRemoteToken.trim()}
+                      >
+                        {editFetchingRemoteProfiles ? t('profiles.fetchingProfiles') : t('profiles.fetchProfiles')}
+                      </button>
+                      {editSelectedRemoteProfileId && editRemoteProfiles.length === 0 && (
+                        <span style={{ fontSize: 11, color: '#8b949e' }}>
+                          {t('profiles.currentTarget')}: {editSelectedRemoteProfileId}
+                        </span>
+                      )}
+                    </div>
+                    {editRemoteProfiles.length > 0 && (
+                      <select
+                        className="profile-name-input"
+                        value={editSelectedRemoteProfileId}
+                        onChange={e => setEditSelectedRemoteProfileId(e.target.value)}
+                        style={{ width: '100%' }}
+                      >
+                        {editRemoteProfiles.map(rp => (
+                          <option key={rp.id} value={rp.id}>
+                            {rp.name} {rp.type === 'remote' ? `(${t('profiles.remote')})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button className="profile-action-btn" onClick={() => handleSaveRemote(profile.id)}>{t('common.save')}</button>
-                      <button className="profile-action-btn" onClick={() => setEditingRemoteId(null)}>{t('common.cancel')}</button>
+                      <button className="profile-action-btn" onClick={() => { setEditingRemoteId(null); setEditRemoteProfiles([]) }}>{t('common.cancel')}</button>
                     </div>
                   </div>
                 )}

@@ -142,7 +142,10 @@
     "saveAndOpen": "儲存當前並開啟",
     "newWindow": "開啟",
     "alreadyOpen": "此設定檔已在另一個視窗中開啟。",
-    "host": "主機"
+    "host": "主機",
+    "fetchProfiles": "取得設定檔",
+    "fetchingProfiles": "取得中...",
+    "currentTarget": "目前目標"
   },
 
   "workspace": {

@@ -44,7 +44,7 @@ export const PROXIED_CHANNELS = new Set([
   'snippet:delete', 'snippet:toggleFavorite', 'snippet:search',
   'snippet:getCategories', 'snippet:getFavorites', 'snippet:getByWorkspace',
   // Profile
-  'profile:list', 'profile:load', 'profile:get-active-ids', 'profile:activate', 'profile:deactivate',
+  'profile:list', 'profile:load', 'profile:load-snapshot', 'profile:get-active-ids', 'profile:activate', 'profile:deactivate',
 ])
 
 // Events pushed from host to remote clients

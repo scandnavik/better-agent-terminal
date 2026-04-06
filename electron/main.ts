@@ -54,7 +54,7 @@ import { ClaudeAgentManager } from './claude-agent-manager'
 import { worktreeManager } from './worktree-manager'
 import { checkForUpdates, UpdateCheckResult } from './update-checker'
 import { snippetDb, CreateSnippetInput } from './snippet-db'
-import { ProfileManager } from './profile-manager'
+import { ProfileManager, type ProfileSnapshot } from './profile-manager'
 import { registerHandler, invokeHandler } from './remote/handler-registry'
 import { broadcastHub } from './remote/broadcast-hub'
 import { PROXIED_CHANNELS } from './remote/protocol'
@@ -475,9 +475,8 @@ app.whenReady().then(async () => {
   // Clear windows.json — it's purely runtime state, snapshots are the source of truth
   await windowRegistry.clear()
 
-  // Helper: restore all windows from a profile snapshot into the registry
-  const restoreFromSnapshot = async (profileId: string): Promise<number> => {
-    const snapshot = await profileManager.loadSnapshot(profileId)
+  // Helper: apply a snapshot's windows into the registry
+  const applySnapshot = async (profileId: string, snapshot: ProfileSnapshot): Promise<number> => {
     if (!snapshot || snapshot.windows.length === 0) return 0
     for (const winSnap of snapshot.windows) {
       const entry = await windowRegistry.createEntry({ profileId })
@@ -491,6 +490,46 @@ app.whenReady().then(async () => {
       windowsToCreate.push({ id: entry.id, bounds: winSnap.bounds })
     }
     return snapshot.windows.length
+  }
+
+  // Helper: restore windows for a profile — remote profiles fetch snapshot from remote server
+  const restoreFromSnapshot = async (profileId: string): Promise<number> => {
+    const profileEntry = await profileManager.getProfile(profileId)
+
+    // Remote profile: connect and fetch snapshot from remote server
+    if (profileEntry?.type === 'remote' && profileEntry.remoteHost && profileEntry.remoteToken) {
+      try {
+        const client = new RemoteClient(getAllWindows)
+        const ok = await client.connect(
+          profileEntry.remoteHost,
+          profileEntry.remotePort || 9876,
+          profileEntry.remoteToken,
+        )
+        if (!ok) {
+          logger.error(`[startup] remote connect failed for profile ${profileId} (${profileEntry.remoteHost}:${profileEntry.remotePort})`)
+          return 0
+        }
+        remoteClient = client
+
+        // Determine which profile to load on the remote side
+        const targetProfileId = profileEntry.remoteProfileId || 'default'
+        const snapshot = await client.invoke('profile:load-snapshot', [targetProfileId]) as ProfileSnapshot | null
+        if (!snapshot || snapshot.windows.length === 0) {
+          logger.log(`[startup] remote profile ${profileId} → no snapshot from remote (target: ${targetProfileId})`)
+          return 0
+        }
+        logger.log(`[startup] remote profile ${profileId} → got ${snapshot.windows.length} window(s) from remote (target: ${targetProfileId})`)
+        return applySnapshot(profileId, snapshot)
+      } catch (err) {
+        logger.error(`[startup] remote profile ${profileId} restore failed:`, err instanceof Error ? err.message : String(err))
+        return 0
+      }
+    }
+
+    // Local profile: read snapshot from disk
+    const snapshot = await profileManager.loadSnapshot(profileId)
+    if (!snapshot) return 0
+    return applySnapshot(profileId, snapshot)
   }
 
   if (launchProfileId) {
@@ -1172,6 +1211,7 @@ function registerProxiedHandlers() {
   // Profile (subset exposed to remote clients)
   registerHandler('profile:list', (_ctx) => profileManager.list())
   registerHandler('profile:load', (_ctx, profileId: string) => profileManager.load(profileId))
+  registerHandler('profile:load-snapshot', (_ctx, profileId: string) => profileManager.loadSnapshot(profileId))
   registerHandler('profile:get-active-ids', (_ctx) => profileManager.getActiveProfileIds())
   registerHandler('profile:activate', (_ctx, profileId: string) => profileManager.activateProfile(profileId))
   registerHandler('profile:deactivate', (_ctx, profileId: string) => profileManager.deactivateProfile(profileId))
@@ -1353,14 +1393,27 @@ function registerLocalHandlers() {
       return { ok: false }
     }
   })
+  ipcMain.handle('remote:list-profiles', async (_event, host: string, port: number, token: string) => {
+    const tempClient = new RemoteClient(getAllWindows)
+    try {
+      const ok = await tempClient.connect(host, port, token)
+      if (!ok) return { error: 'Connection failed' }
+      const result = await tempClient.invoke('profile:list', []) as { profiles: { id: string; name: string; type: string }[] }
+      tempClient.disconnect()
+      return { profiles: result.profiles.map(p => ({ id: p.id, name: p.name, type: p.type })) }
+    } catch (err) {
+      tempClient.disconnect()
+      return { error: err instanceof Error ? err.message : String(err) }
+    }
+  })
 
   // Profile handlers (local-only — list/load/activate/deactivate/get-active-ids are proxied)
-  ipcMain.handle('profile:create', async (_event, name: string, options?: { type?: 'local' | 'remote'; remoteHost?: string; remotePort?: number; remoteToken?: string }) => profileManager.create(name, options))
+  ipcMain.handle('profile:create', async (_event, name: string, options?: { type?: 'local' | 'remote'; remoteHost?: string; remotePort?: number; remoteToken?: string; remoteProfileId?: string }) => profileManager.create(name, options))
   ipcMain.handle('profile:save', async (_event, profileId: string) => profileManager.save(profileId))
   ipcMain.handle('profile:delete', async (_event, profileId: string) => profileManager.delete(profileId))
   ipcMain.handle('profile:rename', async (_event, profileId: string, newName: string) => profileManager.rename(profileId, newName))
   ipcMain.handle('profile:duplicate', async (_event, profileId: string, newName: string) => profileManager.duplicate(profileId, newName))
-  ipcMain.handle('profile:update', async (_event, profileId: string, updates: { remoteHost?: string; remotePort?: number; remoteToken?: string }) => profileManager.update(profileId, updates))
+  ipcMain.handle('profile:update', async (_event, profileId: string, updates: { remoteHost?: string; remotePort?: number; remoteToken?: string; remoteProfileId?: string }) => profileManager.update(profileId, updates))
   ipcMain.handle('profile:get', async (_event, profileId: string) => profileManager.getProfile(profileId))
 
   // Get the profile ID this instance was launched with (--profile= argument)

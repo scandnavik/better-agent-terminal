@@ -138,7 +138,10 @@
     "saveAndOpen": "保存当前并打开",
     "newWindow": "打开",
     "alreadyOpen": "此配置文件已在另一个窗口中打开。",
-    "host": "主机"
+    "host": "主机",
+    "fetchProfiles": "获取配置",
+    "fetchingProfiles": "获取中...",
+    "currentTarget": "当前目标"
   },
   "workspace": {
     "terminal": "终端",
